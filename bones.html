@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bus to Bønes senter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --night: #0e1620; --deck: #172433; --rail: #26384d; --foam: #e9f0f6; --mist: #8ea3b8;
+    --go: #37d99a; --wait: #f6c453; --miss: #ff6a5c;
+    --out: #f39c4a;   /* til Bønes */
+    --back: #6cb4ee;  /* retur */
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  *, *::before, *::after { box-sizing: inherit; }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--night); color: var(--foam); font-family: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 20px; line-height: 1.3; -webkit-tap-highlight-color: transparent; }
+  main { max-width: 1240px; margin: 0 auto; padding: 18px 26px 36px; }
+  header { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; flex-wrap: wrap; padding-bottom: 16px; border-bottom: 2px solid var(--rail); }
+  h1 { margin: 0; font-size: 38px; font-weight: 700; line-height: 1.05; }
+  .from { color: var(--mist); margin: 6px 0 0; font-size: 20px; }
+  .ctl { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  button { font: inherit; color: var(--foam); background: var(--deck); border: 2px solid var(--rail); border-radius: 14px; padding: 14px 20px; min-height: 60px; min-width: 60px; cursor: pointer; }
+  button:focus-visible { outline: 3px solid var(--wait); outline-offset: 2px; }
+  button[aria-pressed="true"] { border-color: var(--foam); }
+  .seg { display: inline-flex; border: 2px solid var(--rail); border-radius: 14px; overflow: hidden; }
+  .seg button { border: 0; border-radius: 0; }
+  .seg button + button { border-left: 2px solid var(--rail); }
+  .seg button[aria-pressed="true"] { background: var(--rail); }
+  .buf { display: flex; align-items: center; gap: 8px; color: var(--mist); }
+  .buf b { color: var(--foam); min-width: 64px; text-align: center; }
+
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 22px; }
+  .col { background: var(--deck); border-radius: 20px; padding: 20px 22px 8px; border-top: 8px solid var(--rail); }
+  .col.out { border-top-color: var(--out); }
+  .col.back { border-top-color: var(--back); }
+  .mode { font-size: 22px; letter-spacing: .06em; text-transform: uppercase; color: var(--mist); }
+  .head { display: flex; align-items: center; gap: 14px; margin-top: 6px; }
+  .badge { display: inline-flex; align-items: center; justify-content: center; min-width: 64px; height: 64px; padding: 0 16px; border-radius: 16px; font-size: 40px; font-weight: 700; color: #0e1620; }
+  .col.out .badge { background: var(--out); }
+  .col.back .badge { background: var(--back); }
+  .badge.sm { min-width: 44px; height: 44px; font-size: 22px; border-radius: 10px; padding: 0 10px; }
+  .stop { font-size: 32px; font-weight: 700; line-height: 1.1; }
+  .facts { display: flex; gap: 28px; flex-wrap: wrap; margin: 10px 0 14px; color: var(--mist); }
+  .fact b { font-size: 48px; color: var(--foam); font-weight: 700; line-height: 1; margin-right: 8px; }
+  .nav { display: flex; gap: 10px; flex-wrap: wrap; margin: 4px 0 12px; }
+  .nav a { font: inherit; color: var(--foam); text-decoration: none; background: rgba(255,255,255,.06); border: 2px solid var(--rail); border-radius: 12px; padding: 12px 18px; min-height: 52px; display: inline-flex; align-items: center; gap: 8px; }
+  .verdict { padding: 14px 16px; border-radius: 12px; background: rgba(255,255,255,.04); border-left: 8px solid var(--rail); font-size: 22px; min-height: 60px; margin-bottom: 8px; }
+  .verdict.go { border-left-color: var(--go); }
+  .verdict.wait { border-left-color: var(--wait); }
+  .verdict.miss { border-left-color: var(--miss); }
+  .verdict b { font-size: 28px; }
+  .deps { list-style: none; margin: 0; padding: 0; }
+  .dep { display: grid; grid-template-columns: 96px auto 1fr; gap: 6px 16px; align-items: center; padding: 12px 6px; border-bottom: 1px solid var(--rail); }
+  .dep:last-child { border-bottom: 0; }
+  .dep .t { font-size: 32px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .dep .to { font-size: 20px; }
+  .dep .to small { display: block; color: var(--mist); font-size: 16px; }
+  .dep .arr { color: var(--mist); font-size: 16px; margin-left: 8px; }
+  .dep .m { grid-column: 2 / -1; font-size: 18px; }
+  .dep.go .m { color: var(--go); }
+  .dep.wait .m { color: var(--wait); }
+  .dep.miss { opacity: .45; }
+  .dep.miss .m { color: var(--miss); }
+  .dep.first { background: rgba(55,217,154,.09); border-radius: 10px; }
+  .dep .rt { color: var(--mist); font-size: 14px; margin-left: 6px; }
+  .more { width: 100%; margin: 8px 0 6px; background: transparent; border-style: dashed; color: var(--mist); min-height: 52px; }
+  .msg { color: var(--mist); padding: 24px 0; font-size: 20px; }
+  .msg.err { color: var(--miss); }
+  footer { color: var(--mist); font-size: 15px; margin-top: 24px; }
+
+  @media (max-width: 860px) { .cols { grid-template-columns: 1fr; gap: 16px; } }
+  @media (max-width: 600px) {
+    body { font-size: 17px; }
+    main { padding: 12px 14px 28px; }
+    header { padding-bottom: 12px; gap: 12px; }
+    h1 { font-size: 26px; }
+    .from { font-size: 16px; margin-top: 2px; }
+    .ctl { width: 100%; gap: 8px; }
+    .ctl > * { flex: 1 1 auto; }
+    button { padding: 10px 12px; min-height: 48px; min-width: 48px; border-radius: 12px; font-size: 16px; }
+    .seg { flex: 0 0 auto; }
+    .buf { justify-content: center; font-size: 15px; }
+    .buf b { min-width: 52px; }
+    .col { padding: 14px 14px 6px; border-radius: 16px; border-top-width: 6px; }
+    .mode { font-size: 17px; }
+    .head { gap: 10px; }
+    .badge { min-width: 48px; height: 48px; font-size: 28px; border-radius: 12px; padding: 0 12px; }
+    .badge.sm { min-width: 40px; height: 34px; font-size: 16px; padding: 0 8px; }
+    .stop { font-size: 22px; }
+    .facts { gap: 18px; margin: 8px 0 10px; }
+    .fact { display: flex; align-items: baseline; gap: 6px; font-size: 14px; }
+    .fact b { font-size: 34px; margin-right: 2px; }
+    .nav { margin: 0 0 10px; }
+    .nav a { flex: 1 1 0; justify-content: center; padding: 10px; min-height: 46px; font-size: 15px; border-radius: 10px; }
+    .verdict { font-size: 17px; padding: 10px 12px; min-height: 0; border-left-width: 6px; }
+    .verdict b { font-size: 22px; }
+    .dep { grid-template-columns: 72px auto 1fr; gap: 2px 10px; padding: 10px 4px; }
+    .dep .t { font-size: 24px; }
+    .dep .to { font-size: 16px; }
+    .dep .to small { font-size: 13px; }
+    .dep .arr { display: block; margin-left: 0; font-size: 13px; }
+    .dep .m { font-size: 15px; }
+    footer { font-size: 13px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1>🚌 <span data-i18n="title">Bus to Bønes senter</span></h1>
+      <p class="from" id="from"></p>
+    </div>
+    <div class="ctl">
+      <div class="seg" role="group" aria-label="Language">
+        <button id="langEn" aria-pressed="true">EN</button>
+        <button id="langNo" aria-pressed="false">NO</button>
+      </div>
+      <button id="btnGps" aria-pressed="false"></button>
+      <div class="buf">
+        <button id="bufMinus" aria-label="-">−</button>
+        <span><span data-i18n="margin">buffer</span> <b id="bufVal"></b></span>
+        <button id="bufPlus" aria-label="+">+</button>
+      </div>
+      <button id="btnRefresh" data-i18n="refresh">Refresh</button>
+    </div>
+  </header>
+
+  <div class="msg" id="msg"></div>
+
+  <div class="cols">
+    <section class="col out">
+      <div class="mode" data-i18n="outHead">→ To Bønes senter</div>
+      <div class="head"><span class="badge" id="outBadge">–</span><div class="stop" id="outStop">…</div></div>
+      <div class="facts">
+        <div class="fact"><b id="outWalk">–</b><span data-i18n="minWalk">min walk</span> <span id="outDist"></span></div>
+        <div class="fact"><b id="outRide">–</b><span data-i18n="minRide">min ride</span></div>
+      </div>
+      <div class="nav">
+        <a id="outGoogle" href="#" target="_blank" rel="noopener">📍 <span data-i18n="navGoogle">Walk there – Google Maps</span></a>
+        <a id="outApple" href="#" target="_blank" rel="noopener">🍎 <span data-i18n="navApple">Apple Maps</span></a>
+      </div>
+      <div class="verdict" id="outVerdict"></div>
+      <ul class="deps" id="outDeps"></ul>
+    </section>
+
+    <section class="col back">
+      <div class="mode" data-i18n="backHead">← Back to town</div>
+      <div class="head"><span class="badge" id="backBadge">–</span><div class="stop" id="backStop">…</div></div>
+      <div class="facts">
+        <div class="fact"><b id="backRide">–</b><span data-i18n="minRide">min ride</span></div>
+        <div class="fact"><b id="backWalk">–</b><span data-i18n="minWalkHome">min walk at the end</span></div>
+      </div>
+      <div class="verdict" id="backVerdict"></div>
+      <ul class="deps" id="backDeps"></ul>
+    </section>
+  </div>
+
+  <footer id="foot"></footer>
+</main>
+
+<script>
+(() => {
+  const ENTUR = "https://api.entur.io/journey-planner/v3/graphql";
+  const GEOCODER = "https://api.entur.io/geocoder/v1/autocomplete";
+  const CLIENT = "voodejord-bones";
+  const HOME = { lat: 60.3898, lon: 5.3253, label: "Christian Michelsens gate 2B" };
+  const DEST_NAME = "Bønes senter";
+  const WALK_KMH = 4.8;
+
+  const T = {
+    en: { title: "Bus to Bønes senter", outHead: "→ To Bønes senter", backHead: "← Back to town", useGps: "Use my location", useHome: "Use Chr. Michelsens gt 2B",
+          margin: "buffer", refresh: "Refresh", minWalk: "min walk", minWalkHome: "min walk at the end", minRide: "min ride", from: "From",
+          finding: "Finding buses …", none: "No buses in the next 3 hours.", next: "Next you can make:", wait: "wait", min: "min",
+          reach: "make it", tight: "tight", missed: "too late", spare: "to spare", late: "too late", cancelled: "cancelled", sched: "scheduled",
+          missAll: "Can't make any of the next departures.", arrOut: "at Bønes senter", arrBack: "at", updated: "Updated",
+          src: "Times, walking and ride time: Entur (Skyss). Buffer = extra time you want at the stop.", gpsErr: "Location denied – using the address",
+          err: "Could not load data: ", navGoogle: "Walk there – Google Maps", navApple: "Apple Maps", more: "Show more departures", less: "Show fewer",
+          yourPos: "your location", leavesIn: "leaves in" },
+    no: { title: "Buss til Bønes senter", outHead: "→ Til Bønes senter", backHead: "← Retur til byen", useGps: "Bruk min posisjon", useHome: "Bruk Chr. Michelsens gt 2B",
+          margin: "margin", refresh: "Oppdater", minWalk: "min å gå", minWalkHome: "min å gå til slutt", minRide: "min reise", from: "Fra",
+          finding: "Finner busser …", none: "Ingen busser de neste 3 timene.", next: "Neste du rekker:", wait: "venter", min: "min",
+          reach: "rekker", tight: "knapt", missed: "rekker ikke", spare: "til gode", late: "for sein", cancelled: "innstilt", sched: "rutetid",
+          missAll: "Rekker ingen av de neste avgangene.", arrOut: "på Bønes senter", arrBack: "ved", updated: "Oppdatert",
+          src: "Tider, gangtid og reisetid: Entur (Skyss). Margin = ekstra tid du vil ha på holdeplassen.", gpsErr: "Posisjon avslått – bruker adressen",
+          err: "Klarte ikke hente data: ", navGoogle: "Gå dit – Google Maps", navApple: "Apple Maps", more: "Vis flere avganger", less: "Vis færre",
+          yourPos: "din posisjon", leavesIn: "går om" },
+  };
+
+  const $ = id => document.getElementById(id);
+  const lsGet = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch { return d; } };
+  const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
+  const t = k => T[state.lang][k];
+
+  const state = {
+    lang: lsGet("lang", "en"), bufferMin: +lsGet("buf", 5), useGps: false,
+    pos: { ...HOME }, dest: null,           // dest = {id, name, lat, lon}
+    out:  { stop: null, walkSec: null, rideMin: null, calls: [], expanded: false },
+    back: { stop: null, walkSec: null, rideMin: null, calls: [], expanded: false },
+  };
+
+  // ---------- Entur ----------
+  async function gql(query, variables) {
+    const r = await fetch(ENTUR, { method: "POST", headers: { "Content-Type": "application/json", "ET-Client-Name": CLIENT }, body: JSON.stringify({ query, variables }) });
+    if (!r.ok) throw new Error("Entur " + r.status);
+    const j = await r.json();
+    if (j.errors) throw new Error(j.errors[0].message);
+    return j.data;
+  }
+  async function findDest() {
+    const r = await fetch(`${GEOCODER}?text=${encodeURIComponent(DEST_NAME)}&layers=venue&size=5&lang=no&focus.point.lat=60.34&focus.point.lon=5.30`, { headers: { "ET-Client-Name": CLIENT } });
+    const j = await r.json();
+    const f = (j.features || []).find(x => /bønes senter/i.test(x.properties.name)) || j.features?.[0];
+    if (!f) throw new Error("Fant ikke " + DEST_NAME);
+    return { id: f.properties.id, name: f.properties.name, lat: f.geometry.coordinates[1], lon: f.geometry.coordinates[0] };
+  }
+  const TRIP_FIELDS = `tripPatterns{ duration expectedStartTime expectedEndTime
+    legs{ mode duration distance realtime aimedStartTime expectedStartTime expectedEndTime
+      fromPlace{ name quay{ id latitude longitude stopPlace{ id name } } }
+      toPlace{ name }
+      line{ publicCode name } toEstimatedCall{ destinationDisplay{ frontText } } serviceJourney{ id } } }`;
+
+  async function trips(from, to) {
+    // from/to: {place} eller {coordinates}
+    const d = await gql(`query($from:Location!,$to:Location!){
+      trip(from:$from, to:$to, modes:{accessMode:foot, egressMode:foot, transportModes:[{transportMode:bus}]},
+           numTripPatterns:30, searchWindow:180, maximumTransfers:0, walkSpeed:1.3){ ${TRIP_FIELDS} } }`, { from, to });
+    return d.trip?.tripPatterns || [];
+  }
+
+  // Gjør trip patterns om til {stop, walkSec, rideMin, calls[]} – ett påstigningsstopp (det vanligste) og alle avgangene derfra
+  function digest(patterns, walkAtStart) {
+    const rows = [];
+    for (const tp of patterns) {
+      const legs = tp.legs || [];
+      const bus = legs.find(l => l.mode === "bus"); if (!bus) continue;
+      const preWalk = legs.filter(l => l.mode === "foot" && legs.indexOf(l) < legs.indexOf(bus)).reduce((a, l) => a + l.duration, 0);
+      const postWalk = legs.filter(l => l.mode === "foot" && legs.indexOf(l) > legs.indexOf(bus)).reduce((a, l) => a + l.duration, 0);
+      rows.push({
+        stopId: bus.fromPlace.quay?.stopPlace?.id || bus.fromPlace.name, stopName: bus.fromPlace.quay?.stopPlace?.name || bus.fromPlace.name,
+        lat: bus.fromPlace.quay?.latitude, lon: bus.fromPlace.quay?.longitude,
+        preWalk, postWalk, rideMin: Math.round(bus.duration / 60),
+        t: new Date(bus.expectedStartTime), aimed: new Date(bus.aimedStartTime), realtime: bus.realtime,
+        end: new Date(bus.expectedEndTime), line: bus.line?.publicCode || "", lineName: bus.line?.name || "",
+        to: bus.toEstimatedCall?.destinationDisplay?.frontText || "", sj: bus.serviceJourney?.id,
+      });
+    }
+    if (!rows.length) return { stop: null, walkSec: null, rideMin: null, calls: [] };
+    const count = {}; for (const r of rows) count[r.stopId] = (count[r.stopId] || 0) + 1;
+    const best = Object.entries(count).sort((a, b) => b[1] - a[1])[0][0];
+    const use = rows.filter(r => r.stopId === best);
+    const seen = new Set(); const calls = [];
+    for (const r of use.sort((a, b) => a.t - b.t)) { if (seen.has(r.sj)) continue; seen.add(r.sj); calls.push(r); }
+    const med = a => { a = [...a].sort((x, y) => x - y); return a[Math.floor(a.length / 2)]; };
+    const r0 = use[0];
+    return {
+      stop: { id: r0.stopId, name: r0.stopName, lat: r0.lat, lon: r0.lon },
+      walkSec: walkAtStart ? med(use.map(r => r.preWalk)) : med(use.map(r => r.postWalk)),
+      rideMin: med(use.map(r => r.rideMin)), calls,
+    };
+  }
+
+  // ---------- Flyt ----------
+  async function load() {
+    $("msg").className = "msg"; $("msg").textContent = t("finding");
+    try {
+      if (!state.dest) state.dest = await findDest();
+      const from = { coordinates: { latitude: state.pos.lat, longitude: state.pos.lon } };
+      const home = { coordinates: { latitude: HOME.lat, longitude: HOME.lon } };
+      const dest = { place: state.dest.id };
+      const [po, pb] = await Promise.all([trips(from, dest), trips(dest, home)]);
+      const o = digest(po, true), b = digest(pb, false);
+      Object.assign(state.out, o, { expanded: state.out.expanded });
+      Object.assign(state.back, b, { expanded: state.back.expanded });
+      $("msg").textContent = "";
+    } catch (e) { $("msg").className = "msg err"; $("msg").textContent = t("err") + (e.message || e); }
+    render();
+  }
+
+  // ---------- Rendering ----------
+  const hhmm = d => d.toLocaleTimeString(state.lang === "no" ? "nb-NO" : "en-GB", { hour: "2-digit", minute: "2-digit" });
+  const mins = ms => Math.round(ms / 60000);
+
+  function renderCol(key, ids, withWalkVerdict) {
+    const s = state[key], now = Date.now();
+    if (!s.stop) { $(ids.stop).textContent = "–"; $(ids.deps).innerHTML = ""; $(ids.verdict).className = "verdict"; $(ids.verdict).textContent = s.calls ? t("none") : ""; return; }
+    $(ids.stop).textContent = s.stop.name;
+    $(ids.walk).textContent = s.walkSec == null ? "–" : Math.max(1, Math.round(s.walkSec / 60));
+    if (ids.dist) $(ids.dist).textContent = "";
+    $(ids.ride).textContent = s.rideMin ?? "–";
+    const codes = {}; for (const c of s.calls) if (c.line) codes[c.line] = (codes[c.line] || 0) + 1;
+    const top = Object.entries(codes).sort((a, b) => b[1] - a[1])[0];
+    $(ids.badge).textContent = top ? top[0] : "–";
+    if (ids.google && s.stop.lat) {
+      const d = `${s.stop.lat},${s.stop.lon}`;
+      $(ids.google).href = `https://www.google.com/maps/dir/?api=1&destination=${d}&travelmode=walking`;
+      $(ids.apple).href = `https://maps.apple.com/?daddr=${d}&dirflg=w`;
+    }
+
+    const arrive = withWalkVerdict && s.walkSec != null ? now + s.walkSec * 1000 : null;
+    const all = s.calls.filter(c => c.t.getTime() > now - 60000);
+    const small = window.matchMedia("(max-width: 600px)").matches, LIMIT = 5;
+    const calls = small && !s.expanded && all.length > LIMIT ? all.slice(0, LIMIT) : all;
+    const ul = $(ids.deps); ul.innerHTML = "";
+    let first = null;
+    for (const c of calls) {
+      let status = "", m = "";
+      if (arrive == null) { const d = mins(c.t - now); m = `${t("leavesIn")} ${d} ${t("min")}`; status = d >= 0 ? "" : "miss"; }
+      else {
+        const margin = mins(c.t - (arrive + state.bufferMin * 60000));
+        if (margin >= 3) { status = "go"; m = `${t("reach")} · ${margin} ${t("min")} ${t("spare")}`; }
+        else if (margin >= 0) { status = "wait"; m = `${t("tight")} · ${margin} ${t("min")}`; }
+        else { status = "miss"; m = `${t("missed")} · ${-margin} ${t("min")} ${t("late")}`; }
+        if (!first && status !== "miss") first = { ...c, margin };
+      }
+      const li = document.createElement("li");
+      li.className = `dep ${status}` + (first && first.sj === c.sj && !ul.querySelector(".first") ? " first" : "");
+      const rt = c.realtime ? "" : `<span class="rt">${t("sched")}</span>`;
+      const late = c.realtime && Math.abs(c.t - c.aimed) >= 60000 ? `<span class="rt">(${hhmm(c.aimed)})</span>` : "";
+      const arrTxt = key === "out" ? `→ ${hhmm(c.end)} ${t("arrOut")}` : `→ ${hhmm(c.end)} ${t("arrBack")} ${c.toStop || ""}`.trim();
+      li.innerHTML = `<div class="t">${hhmm(c.t)}${late}</div>
+        <span class="badge sm">🚌 ${c.line || "?"}</span>
+        <div class="to">${c.to}<span class="arr">${arrTxt}</span><small>${c.lineName}${rt}</small></div>
+        <div class="m">${m}</div>`;
+      ul.appendChild(li);
+    }
+    if (small && all.length > LIMIT) {
+      const b = document.createElement("button"); b.className = "more";
+      b.textContent = s.expanded ? t("less") : `${t("more")} (${all.length - LIMIT})`;
+      b.onclick = () => { s.expanded = !s.expanded; render(); }; ul.appendChild(b);
+    }
+    const v = $(ids.verdict);
+    if (!all.length) { v.className = "verdict"; v.textContent = t("none"); }
+    else if (arrive == null) { const n = all[0]; v.className = "verdict go"; v.innerHTML = `<b>${hhmm(n.t)}</b> · ${t("leavesIn")} ${mins(n.t - now)} ${t("min")} → ${hhmm(n.end)}`; }
+    else if (!first) { v.className = "verdict miss"; v.textContent = t("missAll"); }
+    else { v.className = `verdict ${first.margin >= 3 ? "go" : "wait"}`; v.innerHTML = `${t("next")} <b>${hhmm(first.t)}</b> · ${t("wait")} ${mins(first.t - arrive)} ${t("min")} → ${hhmm(first.end)} ${t("arrOut")}`; }
+  }
+
+  function render() {
+    document.documentElement.lang = state.lang === "no" ? "nb" : "en";
+    document.querySelectorAll("[data-i18n]").forEach(el => el.textContent = t(el.dataset.i18n));
+    $("btnGps").textContent = state.useGps ? t("useHome") : t("useGps");
+    $("btnGps").setAttribute("aria-pressed", String(state.useGps));
+    $("langNo").setAttribute("aria-pressed", String(state.lang === "no"));
+    $("langEn").setAttribute("aria-pressed", String(state.lang === "en"));
+    $("bufVal").textContent = `${state.bufferMin} ${t("min")}`;
+    $("from").textContent = `${t("from")} ${state.useGps ? t("yourPos") : HOME.label}`;
+    renderCol("out",  { stop: "outStop", walk: "outWalk", dist: "outDist", ride: "outRide", badge: "outBadge", google: "outGoogle", apple: "outApple", verdict: "outVerdict", deps: "outDeps" }, true);
+    renderCol("back", { stop: "backStop", walk: "backWalk", ride: "backRide", badge: "backBadge", verdict: "backVerdict", deps: "backDeps" }, false);
+    $("foot").textContent = `${t("updated")} ${hhmm(new Date())}. ${t("src")}`;
+  }
+
+  // ---------- Knapper ----------
+  const setLang = l => { state.lang = l; lsSet("lang", l); render(); };
+  $("langNo").onclick = () => setLang("no");
+  $("langEn").onclick = () => setLang("en");
+  $("btnRefresh").onclick = load;
+  const setBuf = v => { state.bufferMin = Math.max(0, Math.min(20, v)); lsSet("buf", state.bufferMin); render(); };
+  $("bufMinus").onclick = () => setBuf(state.bufferMin - 1);
+  $("bufPlus").onclick = () => setBuf(state.bufferMin + 1);
+  $("btnGps").onclick = () => {
+    if (state.useGps) { state.useGps = false; state.pos = { ...HOME }; return load(); }
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      p => { state.useGps = true; state.pos = { lat: p.coords.latitude, lon: p.coords.longitude }; load(); },
+      () => { $("msg").className = "msg err"; $("msg").textContent = t("gpsErr"); },
+      { enableHighAccuracy: true, timeout: 15000 });
+  };
+
+  render(); load();
+  setInterval(load, 60000);
+  let rz; window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(render, 150); });
+})();
+</script>
+</body>
+</html>
