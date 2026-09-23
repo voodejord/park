@@ -84,3 +84,9 @@ body {
 .strekliste li:hover { background: var(--bg); }
 .strekliste .sw { width: 14px; height: 6px; border-radius: 3px; flex: none; }
 .strekliste .k { margin-left: auto; color: var(--ink-2); }
+
+.leaflet-popup-content .nav { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+.leaflet-popup-content .nav a, .leaflet-popup-content .nav button {
+  font: 600 12px/1 inherit; padding: 6px 9px; border-radius: 4px; border: 1px solid var(--accent); background: var(--accent); color: #fff; text-decoration: none; cursor: pointer;
+}
+.leaflet-popup-content .nav button { background: transparent; color: var(--accent); }
