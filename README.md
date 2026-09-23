@@ -1,64 +1,69 @@
 # Bergen boligsoneparkering – sone 1–3
 
-Interaktivt kart over boligsoneparkering i Bergen sentrum (sone 1, 2, 3), med sonegrenser, kommunens parkeringskart, parkeringsforbud, boligsoneautomater og et manuelt kuratert lag med skiltede beboerstrekninger. Ekspress- og avgiftsparkering vises som egne kategorier, aldri blandet med beboerparkering.
+Interaktivt kart over beboerparkering i Bergen sentrum, bygd på **offisielle skiltdata fra Nasjonal vegdatabank (NVDB)** kombinert med Bergen kommunes egne parkeringslag. Målet er å vise *nøyaktig hvor* du kan stå med sonekort for sone 1, 2 og 3 – ikke bare hvor sonegrensene går.
 
-Ren statisk side (Leaflet + fetch) – ingen byggesteg, kjører rett på GitHub Pages.
+Live: https://voodejord.github.io/park/
 
-## Kom i gang
+Ren statisk side (Leaflet, ingen byggesteg). Data hentes av GitHub Actions hver mandag og committes som GeoJSON i `data/`.
 
-```bash
-git clone <ditt-repo>
-cd bergen-boligsone-kart
-python3 scripts/snapshot.py --inspect   # finn riktige lag-ID-er og felt hos kommunen
-python3 scripts/snapshot.py             # last ned lag til data/*.geojson
-python3 -m http.server 8080             # åpne http://localhost:8080
-```
+## Hva kartet viser
 
-Uten snapshots prøver kartet live ArcGIS-spørringer mot `kart.bergen.kommune.no`. Det kan feile på CORS eller kuttes ved `maxRecordCount`; snapshots er anbefalt for hosting.
+| Lag | Kilde | Innhold |
+|---|---|---|
+| Beboerskilt (lilla firkant m/ sonetall) | NVDB type 96 Skiltplate | 808-underskilt med tekst «beboere med p-kort sone N» |
+| P-skilt m/ tekstløst underskilt (hul firkant «?») | NVDB | 552 + 808 på samme stolpe der kommunen ikke har registrert teksten – sannsynlig soneparkering, må verifiseres |
+| Soneinnkjøringsskilt (blå ramme) | NVDB | 376.1/376.2 Parkeringssone – der sonen faktisk begynner |
+| Beboerstrekninger (stiplet lilla) | Utledet | Fra skiltstolpen langs vegen til neste reguleringsskilt, styrt av 828-pilskilt der de finnes |
+| Sonegrenser (transparent polygon) | Bergen kommune ArcGIS | Søknadsområde for sonekort – **ikke** parkeringsstrekninger |
+| Avgiftsparkering (grå/rød punkt) | Bergen kommune ArcGIS | Automater/parkometer med antall plasser; rød = ekspress (maks 1 time) |
+| EL-lading, HC, parkeringsforbud, boligsoneautomater | Bergen kommune ArcGIS | Av som standard |
+| Parkeringsområder, trafikklommer | NVDB type 43 / 47 | Av som standard |
+| OSM – boligsone/beboer | OpenStreetMap (Overpass) | De få objektene frivillige har tagget |
 
-## GitHub Pages
+Alle popups har navigasjonsknapper (Google Maps / Apple Kart / geo:-lenke) og viser hvilken sonepolygon objektet ligger i.
 
-1. Push til `main`.
-2. Settings → Pages → Source: *GitHub Actions* (workflow i `.github/workflows/pages.yml` publiserer rot-mappen), eller *Deploy from branch* → `main` / `/ (root)`.
-3. Filen `.nojekyll` gjør at ingenting prosesseres.
+## Viktigste innsikter
+
+- **Sone 1 er ikke en ordinær boligsone.** Bare enkelte strekninger er reservert, og hver av dem er skiltet med 552 + underskilt «Gjelder beboere med P-kort sone 1». Disse finnes i NVDB.
+- **Sone 2 og 3 er ordinære soner**: regulert med 376.1 «Parkeringssone – med p-kort eller ved parkometer» ved innkjøringen. Det finnes ingen egne beboerskilt per strekning – all lovlig gateparkering innenfor er soneparkering.
+- **Kommunens eget kart viser ikke parkeringsstrekninger**, bare søknadsområde og automater. `Type = '376 Boligsone'` i ArcGIS er ikke et komplett lag.
+- **Mange nyregistrerte skiltstolper i NVDB (id 1027…) mangler underskilttekst.** Kartet flagger dem med «?». Dette er en datamangel hos Bymiljøetaten, ikke i kartet.
+- **828-pilskilt** («Utstrekning av stans- og parkeringsregulering») gir eksakt retning: 828.1 framover, 828.2 bakover, 828.3 begge veier.
 
 ## Struktur
 
-| Fil | Innhold |
-|---|---|
-| `index.html`, `app.js`, `style.css` | Kartet |
-| `config.js` | Datakilder, lag-ID-er, feltnavn, klassifiseringsregler, farger |
-| `data/beboerparkering_manuell.geojson` | Håndkuratert lag – én feature per skiltet strekning |
-| `data/*.geojson` (øvrige) | Snapshots fra kommunens ArcGIS, generert av `scripts/snapshot.py` |
-| `NOTATER.md` | Kartleggingsnotater, kilder, kjente feil |
-
-## Manuelt lag – datamodell
-
-```json
-{
-  "gate": "Markeveien",
-  "strekning": "Ved Torgallmenningen / utgang KlosterGarasjen",
-  "side": "nord | sør | øst | vest | ukjent",
-  "sone": "1",
-  "type": "boligsone",
-  "antall_plasser": 6,
-  "vilkar": "Beboere med P-kort sone 1. Hele døgnet.",
-  "status": "verifisert | indikert | usikker",
-  "kilde": "Bymiljøetaten skiltplan 2025",
-  "geometri_noyaktighet": "skiltplan | omtrentlig",
-  "sist_sjekket": "2026-09-23"
-}
+```
+index.html, app.js, style.css   kartet
+config.js                       lag, kilder, farger, klassifiseringsregler
+scripts/snapshot.py             Bergen kommune ArcGIS -> data/*.geojson (--inspect lister lag/felt)
+scripts/nvdb_skilt.py           NVDB skiltplater -> data/nvdb_skilt.geojson, nvdb_stolper.json, nvdb_tekster.txt
+scripts/nvdb_ekstra.py          NVDB parkeringsområder, trafikklommer, adresser -> gatenavn.json
+scripts/nvdb_strekninger.py     utleder strekninger fra skilt -> data/nvdb_strekninger.geojson
+scripts/osm_parking.py          Overpass -> data/osm_parking.geojson
+data/                           snapshots (regenereres av workflow)
+.github/workflows/snapshot.yml  ukentlig datainnhenting + commit
+NOTATER.md                      kartleggingsnotater og kilder
 ```
 
-Geometri som `LineString` (`[lon, lat]`) langs fortauskanten på riktig side. `verifisert` tegnes heltrukket, resten stiplet.
+## Kjøre selv
 
-## Kjente forbehold
+```bash
+python3 -m http.server 8080     # åpne http://localhost:8080
+```
 
-- Sonepolygonene er **søknadsområde**, ikke parkeringsstrekninger. Sone 1 er ikke ordinær boligsone; bare enkelte skiltede strekninger gjelder.
-- `Type = '376 Boligsone'` i kommunens parkeringskart er **ikke** et komplett boligsonelag.
-- Lag-ID `Parkeringskart_bergenskart2023/MapServer/0` er en antakelse – verifiser med `--inspect` og oppdater `config.js` + `scripts/snapshot.py`.
-- Klassifiseringsregler (`config.js → klassifisering`) er regex mot `Type`/`PBetingelser`. Juster etter faktiske verdier fra `--inspect`.
+Datainnhenting kjøres normalt i GitHub Actions (Actions → «Snapshot ArcGIS-data» → Run workflow).
+
+## Datakilder
+
+- NVDB API Les v4 – https://nvdbapiles.atlas.vegvesen.no (NLOD)
+- Bergen kommune / Bymiljøetaten ArcGIS REST – https://kart.bergen.kommune.no/arcgis/rest/services/Bymiljoetaten
+- Kartverket WMTS (bakgrunn), OpenStreetMap (bakgrunn + Overpass)
+- Boligsoneregler: https://www.bergen.kommune.no/innbyggerhjelpen/vann-vei-og-trafikk/vei-transport-og-parkering/parkering/boligsoneparkering
+
+## Forbehold
+
+Strekningene er *utledet* fra skiltpunkt og vegnett, ikke vedtatt geometri. Skilt med «?» er ikke bekreftet. Bruk kartet som hjelp, ikke som fasit – skiltet på stedet gjelder.
 
 ## Lisens
 
-Kode: MIT. Kommunens data følger Bergen kommunes vilkår; ParkMe/INRIX-data er ikke inkludert.
+Kode: MIT. Data følger kildenes vilkår (NLOD for NVDB, Bergen kommunes vilkår for ArcGIS-lagene, ODbL for OSM).
