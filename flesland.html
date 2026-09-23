@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="nb">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Til Flesland</title>
+<title>To Flesland Airport</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
 <style>
@@ -90,11 +90,44 @@
   .msg.err { color: var(--miss); }
   footer { color: var(--mist); font-size: 15px; margin-top: 24px; }
 
+  .more { width: 100%; margin: 8px 0 6px; background: transparent; border-style: dashed; color: var(--mist); min-height: 52px; }
+
   @media (max-width: 860px) {
-    .cols { grid-template-columns: 1fr; }
-    h1 { font-size: 30px; }
-    .stop { font-size: 26px; }
-    .fact b { font-size: 40px; }
+    .cols { grid-template-columns: 1fr; gap: 16px; }
+  }
+  @media (max-width: 600px) {
+    body { font-size: 17px; }
+    main { padding: 12px 14px 28px; }
+    header { padding-bottom: 12px; gap: 12px; }
+    h1 { font-size: 26px; }
+    .from { font-size: 16px; margin-top: 2px; }
+    .ctl { width: 100%; gap: 8px; }
+    .ctl > * { flex: 1 1 auto; }
+    button { padding: 10px 12px; min-height: 48px; min-width: 48px; border-radius: 12px; font-size: 16px; }
+    .seg { flex: 0 0 auto; }
+    .buf { justify-content: center; font-size: 15px; }
+    .buf b { min-width: 52px; }
+    .col { padding: 14px 14px 6px; border-radius: 16px; border-top-width: 6px; }
+    .mode { font-size: 17px; }
+    .head { gap: 10px; }
+    .badge { min-width: 48px; height: 48px; font-size: 28px; border-radius: 12px; padding: 0 12px; }
+    .badge.sm { min-width: 40px; height: 34px; font-size: 16px; padding: 0 8px; }
+    .stop { font-size: 22px; }
+    .facts { gap: 18px; margin: 8px 0 10px; }
+    .fact { display: flex; align-items: baseline; gap: 6px; font-size: 14px; }
+    .fact b { font-size: 34px; margin-right: 2px; }
+    .nav { margin: 0 0 10px; }
+    .nav a { flex: 1 1 0; justify-content: center; padding: 10px 10px; min-height: 46px; font-size: 15px; border-radius: 10px; }
+    .verdict { font-size: 17px; padding: 10px 12px; min-height: 0; border-left-width: 6px; }
+    .verdict b { font-size: 22px; }
+    .dep { grid-template-columns: 72px auto 1fr; gap: 2px 10px; padding: 10px 4px; }
+    .dep .t { font-size: 24px; }
+    .dep .to { font-size: 16px; }
+    .dep .to small { font-size: 13px; }
+    .dep .arr { display: block; margin-left: 0; font-size: 13px; }
+    .dep .m { font-size: 15px; }
+    .dep .rt { font-size: 12px; }
+    footer { font-size: 13px; }
   }
 </style>
 </head>
@@ -107,8 +140,8 @@
     </div>
     <div class="ctl">
       <div class="seg" role="group" aria-label="Language">
-        <button id="langNo" aria-pressed="true">NO</button>
-        <button id="langEn" aria-pressed="false">EN</button>
+        <button id="langEn" aria-pressed="true">EN</button>
+        <button id="langNo" aria-pressed="false">NO</button>
       </div>
       <button id="btnGps" aria-pressed="false" data-i18n="useGps">Bruk min posisjon</button>
       <div class="buf">
@@ -169,14 +202,14 @@
 
   const T = {
     no: { title: "Til Flesland", useGps: "Bruk min posisjon", useHome: "Bruk Chr. Michelsens gt 2B", margin: "margin", refresh: "Oppdater",
-          minWalk: "min å gå", minRide: "min reise", navGoogle: "Gå dit – Google Maps", navApple: "Apple Maps", arr: "på Flesland", from: "Fra", walkFrom: "gangtid fra", finding: "Finner nærmeste stopp …",
+          minWalk: "min å gå", minRide: "min reise", navGoogle: "Gå dit – Google Maps", navApple: "Apple Maps", more: "Vis flere avganger", less: "Vis færre", arr: "på Flesland", from: "Fra", walkFrom: "gangtid fra", finding: "Finner nærmeste stopp …",
           none: "Ingen avganger mot Flesland de neste 3 timene.", noStop: "Fant ikke stopp innen 1,5 km",
           next: "Neste du rekker:", wait: "venter", min: "min", reach: "rekker", tight: "knapt", missed: "rekker ikke",
           spare: "til gode", late: "for sein", cancelled: "innstilt", sched: "rutetid", missAll: "Rekker ingen av de neste avgangene.",
           updated: "Oppdatert", src: "Avganger, gangtid og reisetid: Entur. Margin = ekstra tid du vil ha på holdeplassen.",
           gpsErr: "Posisjon avslått – bruker adressen", err: "Klarte ikke hente data: " },
     en: { title: "To Flesland Airport", useGps: "Use my location", useHome: "Use Chr. Michelsens gt 2B", margin: "buffer", refresh: "Refresh",
-          minWalk: "min walk", minRide: "min ride", navGoogle: "Walk there – Google Maps", navApple: "Apple Maps", arr: "at Flesland", from: "From", walkFrom: "walking time from", finding: "Finding nearest stops …",
+          minWalk: "min walk", minRide: "min ride", navGoogle: "Walk there – Google Maps", navApple: "Apple Maps", more: "Show more departures", less: "Show fewer", arr: "at Flesland", from: "From", walkFrom: "walking time from", finding: "Finding nearest stops …",
           none: "No departures to Flesland in the next 3 hours.", noStop: "No stop found within 1.5 km",
           next: "Next you can make:", wait: "wait", min: "min", reach: "make it", tight: "tight", missed: "too late",
           spare: "to spare", late: "too late", cancelled: "cancelled", sched: "scheduled", missAll: "Can't make any of the next departures.",
@@ -189,8 +222,8 @@
   const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
 
   const state = {
-    lang: lsGet("lang", "no"),
-    bufferMin: +lsGet("buf", 2),
+    lang: lsGet("lang", "en"),
+    bufferMin: +lsGet("buf", 5),
     useGps: false,
     pos: { ...HOME },
     tram: { stop: null, walkSec: null, walkSrc: "", rideMin: null, calls: [] },
@@ -336,7 +369,10 @@
     const top = Object.entries(codes).sort((a, b) => b[1] - a[1])[0];
     if (top) $(ids.badge).textContent = top[0];
 
-    const calls = s.calls.filter(c => c.t.getTime() > now - 60000);
+    const all = s.calls.filter(c => c.t.getTime() > now - 60000);
+    const small = window.matchMedia("(max-width: 600px)").matches;
+    const LIMIT = 5;
+    const calls = small && !s.expanded && all.length > LIMIT ? all.slice(0, LIMIT) : all;
     const ul = $(ids.deps); ul.innerHTML = "";
     let first = null;
     for (const c of calls) {
@@ -360,6 +396,12 @@
         <div class="to">${c.to}${arr}<small>${c.lineName}${rt}</small></div>
         <div class="m">${m}</div>`;
       ul.appendChild(li);
+    }
+    if (small && all.length > LIMIT) {
+      const b = document.createElement("button"); b.className = "more";
+      b.textContent = s.expanded ? t("less") : `${t("more")} (${all.length - LIMIT})`;
+      b.onclick = () => { s.expanded = !s.expanded; render(); };
+      ul.appendChild(b);
     }
     const v = $(ids.verdict);
     if (!calls.length) { v.className = "verdict"; v.textContent = t("none"); }
@@ -406,6 +448,7 @@
   render();
   load();
   setInterval(refreshCalls, 60000);
+  let rz; window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(render, 150); });
 })();
 </script>
 </body>
