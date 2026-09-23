@@ -172,6 +172,8 @@
   const DEST_NAME = "Bønes senter";
   const LINES = new Set(["14", "15"]);          // Skyss-linjer som går til Bønes
   const DEST_RE = /bønes/i;
+  const PREFER_OUT_STOP = /olav kyrres/i;      // påstigning i byen
+  const RETURN_ALIGHT = "Festplassen";          // avstigning i byen på retur
   const DEBUG = [];
   const WALK_KMH = 4.8;
 
@@ -250,11 +252,13 @@
         t: new Date(bus.expectedStartTime), aimed: new Date(bus.aimedStartTime), realtime: bus.realtime,
         end: new Date(bus.expectedEndTime), line: bus.line?.publicCode || "", lineName: bus.line?.name || "",
         to: bus.toEstimatedCall?.destinationDisplay?.frontText || "", sj: bus.serviceJourney?.id,
+        toStop: bus.toPlace?.name || "",
       });
     }
     if (!rows.length) return { stop: null, walkSec: null, rideMin: null, calls: [] };
     const count = {}; for (const r of rows) count[r.stopId] = (count[r.stopId] || 0) + 1;
-    const best = Object.entries(count).sort((a, b) => b[1] - a[1])[0][0];
+    const pref = walkAtStart ? rows.find(r => PREFER_OUT_STOP.test(r.stopName)) : null;
+    const best = pref ? pref.stopId : Object.entries(count).sort((a, b) => b[1] - a[1])[0][0];
     const use = rows.filter(r => r.stopId === best);
     const seen = new Set(); const calls = [];
     for (const r of use.sort((a, b) => a.t - b.t)) { if (seen.has(r.sj)) continue; seen.add(r.sj); calls.push(r); }
@@ -262,6 +266,7 @@
     const r0 = use[0];
     return {
       stop: { id: r0.stopId, name: r0.stopName, lat: r0.lat, lon: r0.lon },
+      alight: (() => { const c = {}; for (const r of use) c[r.toStop] = (c[r.toStop] || 0) + 1; return Object.entries(c).sort((a, b) => b[1] - a[1])[0]?.[0] || ""; })(),
       walkSec: walkAtStart ? med(use.map(r => r.preWalk)) : med(use.map(r => r.postWalk)),
       rideMin: med(use.map(r => r.rideMin)), calls,
     };
@@ -290,7 +295,8 @@
     return out;
   }
   async function fallbackOut() {
-    const stops = await nearestBusStops(state.pos.lat, state.pos.lon, 1200);
+    let stops = await nearestBusStops(state.pos.lat, state.pos.lon, 1200);
+    stops = [...stops.filter(x => PREFER_OUT_STOP.test(x.name)), ...stops.filter(x => !PREFER_OUT_STOP.test(x.name))];
     const calls = await callsForStops(stops.map(x => x.id));
     for (const st of stops) {
       const c = (calls[st.id] || []).filter(x => LINES.has(x.line) && DEST_RE.test(x.to));
@@ -307,7 +313,7 @@
     const calls = await callsForStops(stops.map(x => x.id));
     for (const st of stops) {
       const c = (calls[st.id] || []).filter(x => LINES.has(x.line) && !DEST_RE.test(x.to));
-      if (c.length) { DEBUG.push(`back fallback: ${st.name}`); return { stop: st, walkSec: null, rideMin: null, calls: c }; }
+      if (c.length) { DEBUG.push(`back fallback: ${st.name}`); return { stop: st, alight: RETURN_ALIGHT, walkSec: null, rideMin: null, calls: c.map(x => ({ ...x, toStop: RETURN_ALIGHT })) }; }
     }
     return { stop: null, walkSec: null, rideMin: null, calls: [] };
   }
@@ -348,7 +354,7 @@
   function renderCol(key, ids, withWalkVerdict) {
     const s = state[key], now = Date.now();
     if (!s.stop) { $(ids.stop).textContent = "–"; $(ids.deps).innerHTML = ""; $(ids.verdict).className = "verdict"; $(ids.verdict).textContent = s.calls ? t("none") : ""; return; }
-    $(ids.stop).textContent = s.stop.name;
+    $(ids.stop).textContent = key === "back" && (s.alight || RETURN_ALIGHT) ? `${s.stop.name} → ${s.alight || RETURN_ALIGHT}` : s.stop.name;
     $(ids.walk).textContent = s.walkSec == null ? "–" : Math.max(1, Math.round(s.walkSec / 60));
     if (ids.dist) $(ids.dist).textContent = "";
     $(ids.ride).textContent = s.rideMin ?? "–";
@@ -381,7 +387,8 @@
       li.className = `dep ${status}` + (first && first.sj === c.sj && !ul.querySelector(".first") ? " first" : "");
       const rt = c.realtime ? "" : `<span class="rt">${t("sched")}</span>`;
       const late = c.realtime && Math.abs(c.t - c.aimed) >= 60000 ? `<span class="rt">(${hhmm(c.aimed)})</span>` : "";
-      const arrTxt = !c.end ? "" : key === "out" ? `→ ${hhmm(c.end)} ${t("arrOut")}` : `→ ${hhmm(c.end)}`;
+      const arrTxt = key === "out" ? (c.end ? `→ ${hhmm(c.end)} ${t("arrOut")}` : "")
+                                    : (c.end ? `→ ${hhmm(c.end)} ${c.toStop || RETURN_ALIGHT}` : `→ ${c.toStop || RETURN_ALIGHT}`);
       li.innerHTML = `<div class="t">${hhmm(c.t)}${late}</div>
         <span class="badge sm">🚌 ${c.line || "?"}</span>
         <div class="to">${c.to}<span class="arr">${arrTxt}</span><small>${c.lineName}${rt}</small></div>
