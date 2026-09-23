@@ -15,8 +15,10 @@ jobs:
           python-version: "3.12"
       - name: Inspiser tjenester
         run: python3 scripts/snapshot.py --inspect > data/inspect.txt 2>&1 || true
-      - name: Last ned lag
+      - name: Last ned kommunens lag
         run: python3 scripts/snapshot.py || true
+      - name: Last ned OSM-gateparkering
+        run: python3 scripts/osm_parking.py || true
       - name: Commit data
         run: |
           git config user.name "snapshot-bot"
