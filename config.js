@@ -72,6 +72,12 @@ window.KART_CONFIG = {
       paa: true,
       merknad: "Skiltplater fra Nasjonal vegdatabank. Lilla = tekst nevner sone/beboer/P-kort. Skiltet står ved starten av strekningen."
     },
+    strekninger: {
+      tittel: "Beboerstrekninger utledet fra NVDB-skilt",
+      snapshot: "data/nvdb_strekninger.geojson",
+      paa: true,
+      merknad: "Fra skiltstolpen og framover i kjøreretningen til neste reguleringsskilt (maks 180 m), forskjøvet til skiltets side. Utledet – verifiser i felt."
+    },
     osm: {
       tittel: "OSM – boligsone/beboer",
       snapshot: "data/osm_parking.geojson",
