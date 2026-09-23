@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 Utled boligsone-strekninger fra NVDB-skilt -> data/nvdb_strekninger.geojson
 
@@ -78,6 +79,45 @@ def veglenkesekvens_geom(vid):
             lenker.append((l["startposisjon"], l["sluttposisjon"], pts))
     lenker.sort()
     return lenker
+
+
+def porter_for(vid):
+    d = get(f"{API}/vegnett/api/v4/veglenkesekvenser/{vid}", {"srid": 4326})
+    obj = d.get("objekter", [d]) if isinstance(d, dict) else d
+    if isinstance(obj, list) and obj and "porter" in obj[0]:
+        d = obj[0]
+    return d.get("porter", [])
+
+
+def naboer(vid, ende_pos):
+    """Veglenkesekvenser koblet til noden i enden (ende_pos 0 eller 1) av vid."""
+    ut = []
+    for p in porter_for(vid):
+        if abs((p.get("relativPosisjon") or 0) - ende_pos) > 1e-6:
+            continue
+        nid = (p.get("tilkobling") or {}).get("nodeid")
+        if not nid:
+            continue
+        try:
+            n = get(f"{API}/vegnett/api/v4/noder/{nid}", {"srid": 4326})
+        except RuntimeError:
+            continue
+        for np_ in n.get("porter", []):
+            tk = np_.get("tilkobling") or {}
+            nvid, npos = tk.get("veglenkesekvensid"), tk.get("relativPosisjon")
+            if nvid and nvid != vid and npos is not None:
+                ut.append((nvid, npos))  # posisjon på nabo der den kobler til noden
+    return ut
+
+
+def retning_grader(a, b):
+    dx = (b[0] - a[0]) * math.cos(math.radians(a[1])); dy = b[1] - a[1]
+    return math.degrees(math.atan2(dx, dy)) % 360
+
+
+def vinkeldiff(a, b):
+    d = abs(a - b) % 360
+    return min(d, 360 - d)
 
 
 def punkt_ved(lenker, pos):
@@ -181,6 +221,88 @@ def skiltpunkter_paa_lenke(vid):
     return ut
 
 
+# ---------- følg vegen fra skiltet ----------
+def reguleringspunkt(vid, typer_cache):
+    """Skiltpunkter med reguleringsplate på veglenkesekvens vid: [(pos, side)]."""
+    andre = skiltpunkter_paa_lenke(vid)
+    ids = [i for s_ in andre for i in s_["plater"]]
+    nye = [i for i in ids if i not in typer_cache]
+    if nye:
+        typer_cache.update(plater(nye))
+    ut = []
+    for s_ in andre:
+        if s_["pos"] is None:
+            continue
+        if any(RE_REGULERING.match(typer_cache.get(i, {}).get("nr", "")) for i in s_["plater"]):
+            ut.append((s_["pos"], s_["side"], s_["id"]))
+    return ut
+
+
+def folg(vid, pos, fram, side, start_id, typer_cache, maks_m=MAKS_M, hopp=2):
+    """Gå fra pos på vid i retning fram/ikke fram. Returnerer (punkter[lon,lat] i kjøreretning, stoppgrunn)."""
+    linje, grunn, rest = [], "enden av vegnettet", maks_m
+    cur_vid, cur_pos, cur_fram = vid, pos, fram
+    for hopp_nr in range(hopp + 1):
+        lenker = veglenkesekvens_geom(cur_vid)
+        if not lenker:
+            grunn = "mangler geometri"; break
+        stopp = None
+        for (p_, sd, sid) in sorted(reguleringspunkt(cur_vid, typer_cache), key=lambda x: x[0], reverse=not cur_fram):
+            if sid == start_id:
+                continue
+            if (cur_fram and p_ <= cur_pos + 1e-6) or (not cur_fram and p_ >= cur_pos - 1e-6):
+                continue
+            if sd and side and sd != side:
+                continue
+            stopp = p_; break
+        slutt = stopp if stopp is not None else (1.0 if cur_fram else 0.0)
+        p0, p1 = (cur_pos, slutt) if cur_fram else (slutt, cur_pos)
+        bit = utsnitt(lenker, p0, p1)
+        if not cur_fram:
+            bit = bit[::-1]
+        if linje and bit and linje[-1] == bit[0]:
+            bit = bit[1:]
+        # kapp
+        acc = 0.0
+        for i in range(1, len(bit)):
+            seg = hav(bit[i - 1], bit[i])
+            if acc + seg > rest:
+                fr = (rest - acc) / seg if seg else 0
+                bit = bit[:i] + [[bit[i - 1][0] + (bit[i][0] - bit[i - 1][0]) * fr, bit[i - 1][1] + (bit[i][1] - bit[i - 1][1]) * fr]]
+                linje += bit
+                return linje, f"kappet ved {int(maks_m)} m"
+            acc += seg
+        rest -= acc
+        linje += bit
+        if stopp is not None:
+            return linje, "neste reguleringsskilt"
+        # nådde enden av veglenka: hopp videre langs mest rettfram nabo
+        if hopp_nr == hopp or len(linje) < 2:
+            grunn = "enden av veglenka"; break
+        kandidater = naboer(cur_vid, 1.0 if cur_fram else 0.0)
+        if not kandidater:
+            grunn = "enden av veglenka"; break
+        heading = retning_grader(linje[-2], linje[-1])
+        beste = None
+        for nvid, npos in kandidater:
+            nl = veglenkesekvens_geom(nvid)
+            if not nl:
+                continue
+            nfram = npos < 0.5  # kobler i starten -> går framover (økende pos)
+            a = punkt_ved(nl, npos)
+            b = punkt_ved(nl, min(npos + 0.05, 1.0) if nfram else max(npos - 0.05, 0.0))
+            if not a or not b or a == b:
+                continue
+            diff = vinkeldiff(heading, retning_grader(a, b))
+            if beste is None or diff < beste[0]:
+                beste = (diff, nvid, npos, nfram)
+        if not beste or beste[0] > 45:  # bare fortsett når vegen går noenlunde rett fram
+            grunn = "veglenke slutter (kryss)"; break
+        _, cur_vid, cur_pos, cur_fram = beste
+        grunn = "fortsatte over kryss"
+    return linje, grunn
+
+
 # ---------- hoved ----------
 def main():
     skilt = json.loads(INN.read_text(encoding="utf-8"))["features"]
@@ -204,39 +326,16 @@ def main():
             egne = plater(sp["plater"]) if sp["plater"] else {}
             vender = next((v["vender"] for v in egne.values() if v.get("vender")), None) or (p.get("egenskaper") or {}).get("Ansiktsside, rettet mot") or ""
             fram = "mot metrering" not in vender.lower()  # skiltet vender mot trafikk MED metrering -> gjelder framover (økende pos)
-            # kandidater for slutt: andre skiltpunkt på lenka med reguleringsplate
-            andre = [s for s in skiltpunkter_paa_lenke(sp["vid"]) if s["id"] != sp["id"] and s["pos"] is not None]
-            alle_ids = [i for s in andre for i in s["plater"]]
-            typer = plater(alle_ids) if alle_ids else {}
-            stopp = None
-            for s in sorted(andre, key=lambda s: s["pos"], reverse=not fram):
-                if (fram and s["pos"] <= sp["pos"]) or (not fram and s["pos"] >= sp["pos"]):
-                    continue
-                if s["side"] and sp["side"] and s["side"] != sp["side"]:
-                    continue
-                if any(RE_REGULERING.match(typer.get(i, {}).get("nr", "")) for i in s["plater"]):
-                    stopp = s; break
-            slutt = stopp["pos"] if stopp else (1.0 if fram else 0.0)
-            p0, p1 = (sp["pos"], slutt) if fram else (slutt, sp["pos"])
-            linje = utsnitt(lenker, p0, p1)
-            if not fram:
-                linje = linje[::-1]
-            # kapp ved MAKS_M
-            if linjelengde(linje) > MAKS_M:
-                kort, acc = [linje[0]], 0.0
-                for i in range(1, len(linje)):
-                    seg = hav(linje[i - 1], linje[i])
-                    if acc + seg > MAKS_M:
-                        fr = (MAKS_M - acc) / seg
-                        kort.append([linje[i - 1][0] + (linje[i][0] - linje[i - 1][0]) * fr, linje[i - 1][1] + (linje[i][1] - linje[i - 1][1]) * fr]); break
-                    kort.append(linje[i]); acc += seg
-                linje, stopp_grunn = kort, f"kappet ved {int(MAKS_M)} m"
-            else:
-                stopp_grunn = "neste reguleringsskilt" if stopp else "enden av veglenka"
+            typer_cache = {}
+            linje, stopp_grunn = folg(sp["vid"], sp["pos"], fram, sp["side"], sp["id"], typer_cache)
+            if linjelengde(linje) < 10:
+                alt, alt_grunn = folg(sp["vid"], sp["pos"], not fram, sp["side"], sp["id"], typer_cache)
+                if linjelengde(alt) > linjelengde(linje):
+                    linje, stopp_grunn, fram = alt, alt_grunn + " (snudd retning)", not fram
             side = sp["side"]
-            geom_pts = forskyv(linje if fram else linje[::-1], side, OFFSET_M)
-            if not fram:
-                geom_pts = geom_pts[::-1]
+            # linje ligger i kjøreretning; H/V er relativt til metrering -> snu ved kjøring mot metrering
+            side_kj = side if fram else {"H": "V", "V": "H"}.get(side, side)
+            geom_pts = forskyv(linje, side_kj, OFFSET_M)
             if len(geom_pts) < 2:
                 continue
             soner = re.findall(r"sone\s*(\d+)", (p.get("tekst") or "").lower())
