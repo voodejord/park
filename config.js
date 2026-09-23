@@ -66,6 +66,12 @@ window.KART_CONFIG = {
       snapshot: "data/automater.geojson",
       paa: false
     },
+    osm: {
+      tittel: "OpenStreetMap – gateparkering",
+      snapshot: "data/osm_parking.geojson",
+      paa: true,
+      merknad: "Frivillig kartlagt (Overpass). Lilla = beboer/permit, rød = korttid, grå = avgift. Dekning varierer – verifiser før bruk."
+    },
     manuell: {
       tittel: "Beboerparkering – manuelt verifisert",
       snapshot: "data/beboerparkering_manuell.geojson",
