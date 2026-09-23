@@ -10,14 +10,14 @@
 
   const kartverket = L.tileLayer("https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/{z}/{y}/{x}.png", {
     maxZoom: 20, attribution: '&copy; <a href="https://www.kartverket.no/">Kartverket</a> · Parkeringsdata: Bergen kommune'
-  }).addTo(map);
+  });
   const graatone = L.tileLayer("https://cache.kartverket.no/v1/wmts/1.0.0/topograatone/default/webmercator/{z}/{y}/{x}.png", {
     maxZoom: 20, attribution: '&copy; <a href="https://www.kartverket.no/">Kartverket</a> · Parkeringsdata: Bergen kommune'
   });
   const osm = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · Parkeringsdata: Bergen kommune'
-  });
-  L.control.layers({ "Kartverket topo": kartverket, "Kartverket gråtone": graatone, "OpenStreetMap": osm }, null, { position: "topright" }).addTo(map);
+  }).addTo(map);
+  L.control.layers({ "OpenStreetMap": osm, "Kartverket topo": kartverket, "Kartverket gråtone": graatone }, null, { position: "topright" }).addTo(map);
 
   const panel = document.getElementById("panel");
   document.getElementById("togglePanel").onclick = () => panel.classList.toggle("open");
@@ -97,6 +97,23 @@
     return "utenfor 1–3";
   }
 
+  // Globalt filter: kun objekter innenfor sone 1–3
+  const kunSone = () => document.getElementById("kunSone123")?.checked;
+  function iSone123(geom) { const s = soneFor(geom); return ["1", "2", "3"].includes(String(s)); }
+  const alleGeoJsonLag = [];
+  function registrerFilter(layer) { alleGeoJsonLag.push(layer); }
+  function bruk123Filter() {
+    for (const layer of alleGeoJsonLag) {
+      layer.eachLayer(l => {
+        const f = l.feature; if (!f) return;
+        const el = l.getElement ? l.getElement() : (l._path || null);
+        const vis = !kunSone() || iSone123(f.geometry);
+        if (el) el.style.display = vis ? "" : "none";
+      });
+    }
+    tegnParkering();
+  }
+
   function soneFarge(sone) {
     const s = String(sone ?? "").trim();
     return F["sone" + s] || F.boligsone;
@@ -161,7 +178,8 @@
     const aktive = new Set([...document.querySelectorAll(".katfilter:checked")].map(i => i.value));
     const q = document.getElementById("gatesok").value.trim().toLowerCase();
     const filtrert = parkFeatures.filter(f =>
-      aktive.has(f._kat) && (!q || String(f.properties[felt.gate] ?? "").toLowerCase().includes(q)));
+      aktive.has(f._kat) && (!kunSone() || iSone123(f.geometry)) &&
+      (!q || String(f.properties[felt.gate] ?? "").toLowerCase().includes(q)));
 
     L.geoJSON({ type: "FeatureCollection", features: filtrert }, {
       pointToLayer: (f, ll) => L.circleMarker(ll, {
@@ -199,7 +217,7 @@
         ]));
       }
     });
-    leggTilLagValg(id, layer);
+    leggTilLagValg(id, layer); registrerFilter(layer);
   }
 
   // 3) Parkeringsforbud
@@ -210,7 +228,7 @@
       pointToLayer: (f, ll) => L.circleMarker(ll, { radius: 5, color: F.forbud, fillColor: F.forbud, fillOpacity: .9 }),
       onEachFeature: (f, l) => l.bindPopup(popupTabell("Parkeringsforbud", Object.entries(f.properties)))
     });
-    leggTilLagValg("parkeringsforbud", layer);
+    leggTilLagValg("parkeringsforbud", layer); registrerFilter(layer);
   }
 
   // 4) Automater
@@ -222,7 +240,7 @@
       }),
       onEachFeature: (f, l) => l.bindPopup(popupTabell("Boligsoneautomat", Object.entries(f.properties)))
     });
-    leggTilLagValg("automater", layer);
+    leggTilLagValg("automater", layer); registrerFilter(layer);
   }
 
   // 4b) OSM gateparkering – klassifiseres her fra rå-tagger
@@ -240,7 +258,7 @@
     const gj = await hentLag("osm");
     const farge = k => ({ beboer: F.boligsone, ekspress: F.ekspress, avgift: F.avgift, forbud: F.forbud, privat: "#c9c3b4", anlegg: F.automat }[k] || F.annet);
     const layer = L.geoJSON(gj || { type: "FeatureCollection", features: [] }, {
-      filter: f => { f.properties.kategori = osmKategori(f.properties.alle_tags || {}); return true; },
+      filter: f => { f.properties.kategori = osmKategori(f.properties.alle_tags || {}); return ["beboer", "anlegg"].includes(f.properties.kategori); },
       style: f => {
         const k = f.properties.kategori;
         if (k === "anlegg") return { color: F.automat, weight: 1.5, opacity: 0.7, fillColor: F.automat, fillOpacity: 0.2 };
@@ -259,7 +277,30 @@
         ]));
       }
     });
-    leggTilLagValg("osm", layer);
+    leggTilLagValg("osm", layer); registrerFilter(layer);
+  }
+
+  // 4c) NVDB skiltplater
+  async function lastNvdb() {
+    const gj = await hentLag("nvdb");
+    const farge = k => ({ boligsone: F.boligsone, forbud: F.forbud }[k] || F.avgift);
+    const layer = L.geoJSON(gj || { type: "FeatureCollection", features: [] }, {
+      pointToLayer: (f, ll) => {
+        const k = f.properties.kategori;
+        return L.marker(ll, { icon: L.divIcon({ className: "", iconSize: [16, 16], iconAnchor: [8, 8],
+          html: `<div title="${esc(f.properties.tekst || "")}" style="width:${k === "boligsone" ? 16 : 10}px;height:${k === "boligsone" ? 16 : 10}px;background:${farge(k)};border:2px solid #fff;border-radius:3px;box-shadow:0 0 0 1px ${farge(k)}"></div>` }) });
+      },
+      style: f => ({ color: farge(f.properties.kategori), weight: 3 }),
+      onEachFeature: (f, l) => {
+        const p = f.properties;
+        l.bindPopup(popupTabell(`Skilt ${p.skiltnummer || "?"}`, [
+          ["Tekst", p.tekst], ["Kategori", p.kategori], ["Ligger i", "sone " + soneFor(f.geometry)],
+          ["Vegreferanse", p.vegsystem], ["NVDB-id", p.nvdb_id],
+          ...Object.entries(p.egenskaper || {}).filter(([k]) => !/^(Tekst|Skiltnummer)$/.test(k)).slice(0, 8)
+        ]));
+      }
+    });
+    leggTilLagValg("nvdb", layer); registrerFilter(layer);
   }
 
   // 5) Manuelt verifisert beboerparkering – hvit kant + farget strek
@@ -280,7 +321,7 @@
         ], `<span class="status-chip ${esc(p.status)}">${esc(p.status)}</span>`));
       }
     });
-    leggTilLagValg("manuell", L.layerGroup([kant, strek]));
+    leggTilLagValg("manuell", L.layerGroup([kant, strek])); registrerFilter(kant); registrerFilter(strek);
   }
 
   // ---------- Tegnemodus: klikk punkter, få GeoJSON ----------
@@ -329,7 +370,7 @@
     ["fill", F.sone1, "Sone 1 – søknadsområde"], ["fill", F.sone2, "Sone 2 – søknadsområde"], ["fill", F.sone3, "Sone 3 – søknadsområde"],
     ["", F.boligsone, "Beboerparkering, verifisert (heltrukket) / usikker (stiplet)"],
     ["dot", F.ekspress, "Ekspress / korttid"], ["dot", F.avgift, "Vanlig avgiftsparkering"],
-    ["dot", F.hc, "HC"], ["dot", F.lade, "Lading"], ["dot", F.annet, "Annet"], ["fill", "#c9c3b4", "Privat (OSM) – ikke boligsone"], ["fill", F.automat, "Beboeranlegg / P-hus (OSM)"],
+    ["dot", F.hc, "HC"], ["dot", F.lade, "Lading"], ["dot", F.annet, "Annet"], ["fill", F.automat, "Beboeranlegg / P-hus"], ["dot", F.boligsone, "NVDB-skilt: sone/beboer (firkant)"],
     ["hatch", "", "Parkeringsforbud"], ["dot", F.automat, "Boligsoneautomat"]
   ].forEach(([kl, farge, tekst]) => {
     const li = document.createElement("li");
@@ -340,6 +381,9 @@
   // ---------- Start ----------
   lastSonegrenser().then(() => Promise.all([lastManuell(), lastParkeringskart(),
     lastPunktlag("lading", F.lade, "Ladeplass"), lastPunktlag("hc", F.hc, "HC-plass"),
-    lastForbud(), lastAutomater(), lastOsm()]));
+    lastForbud(), lastAutomater(), lastOsm(), lastNvdb()])).then(() => {
+    document.getElementById("kunSone123").onchange = bruk123Filter;
+    bruk123Filter();
+  });
   tegnemodus();
 })();
