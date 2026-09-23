@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Til Flesland</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --night: #0e1620;
+    --deck: #172433;
+    --rail: #26384d;
+    --foam: #e9f0f6;
+    --mist: #8ea3b8;
+    --go: #37d99a;
+    --wait: #f6c453;
+    --miss: #ff6a5c;
+    --tram: #6cb4ee;     /* Bybanen */
+    --bus: #f39c4a;      /* Flybussen */
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  *, *::before, *::after { box-sizing: inherit; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--night); color: var(--foam);
+    font-family: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 20px; line-height: 1.3; -webkit-tap-highlight-color: transparent;
+  }
+  main { max-width: 1240px; margin: 0 auto; padding: 18px 26px 36px; }
+
+  header { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; flex-wrap: wrap; padding-bottom: 16px; border-bottom: 2px solid var(--rail); }
+  h1 { margin: 0; font-size: 38px; font-weight: 700; line-height: 1.05; }
+  .from { color: var(--mist); margin: 6px 0 0; font-size: 20px; }
+  .ctl { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  button {
+    font: inherit; color: var(--foam); background: var(--deck); border: 2px solid var(--rail);
+    border-radius: 14px; padding: 14px 20px; min-height: 60px; min-width: 60px; cursor: pointer;
+  }
+  button:focus-visible { outline: 3px solid var(--wait); outline-offset: 2px; }
+  button[aria-pressed="true"] { border-color: var(--foam); }
+  .seg { display: inline-flex; border: 2px solid var(--rail); border-radius: 14px; overflow: hidden; }
+  .seg button { border: 0; border-radius: 0; }
+  .seg button + button { border-left: 2px solid var(--rail); }
+  .seg button[aria-pressed="true"] { background: var(--rail); }
+  .buf { display: flex; align-items: center; gap: 8px; color: var(--mist); }
+  .buf b { color: var(--foam); min-width: 64px; text-align: center; }
+
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 22px; }
+  .col { background: var(--deck); border-radius: 20px; padding: 20px 22px 8px; border-top: 8px solid var(--rail); }
+  .col.tram { border-top-color: var(--tram); }
+  .col.bus { border-top-color: var(--bus); }
+  .mode { font-size: 18px; letter-spacing: .08em; text-transform: uppercase; color: var(--mist); }
+  .stop { font-size: 32px; font-weight: 700; margin: 4px 0 0; line-height: 1.1; }
+  .walk { display: flex; align-items: baseline; gap: 10px; margin: 8px 0 14px; color: var(--mist); }
+  .walk b { font-size: 48px; color: var(--foam); font-weight: 700; line-height: 1; }
+  .verdict { padding: 14px 16px; border-radius: 12px; background: rgba(255,255,255,.04); border-left: 8px solid var(--rail); font-size: 22px; min-height: 60px; margin-bottom: 8px; }
+  .verdict.go { border-left-color: var(--go); }
+  .verdict.wait { border-left-color: var(--wait); }
+  .verdict.miss { border-left-color: var(--miss); }
+  .verdict b { font-size: 28px; }
+
+  .deps { list-style: none; margin: 0; padding: 0; }
+  .dep { display: grid; grid-template-columns: 96px 1fr; gap: 6px 16px; align-items: center; padding: 12px 6px; border-bottom: 1px solid var(--rail); }
+  .dep:last-child { border-bottom: 0; }
+  .dep .t { font-size: 32px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .dep .to { font-size: 20px; }
+  .dep .to small { display: block; color: var(--mist); font-size: 16px; }
+  .dep .m { grid-column: 2; font-size: 18px; }
+  .dep.go .m { color: var(--go); }
+  .dep.wait .m { color: var(--wait); }
+  .dep.miss { opacity: .45; }
+  .dep.miss .m { color: var(--miss); }
+  .dep.first { background: rgba(55,217,154,.09); border-radius: 10px; }
+  .dep .rt { color: var(--mist); font-size: 14px; margin-left: 6px; }
+  .dep .cancel { text-decoration: line-through; color: var(--miss); }
+
+  .msg { color: var(--mist); padding: 24px 0; font-size: 20px; }
+  .msg.err { color: var(--miss); }
+  footer { color: var(--mist); font-size: 15px; margin-top: 24px; }
+
+  @media (max-width: 860px) {
+    .cols { grid-template-columns: 1fr; }
+    h1 { font-size: 30px; }
+    .stop { font-size: 26px; }
+    .walk b { font-size: 40px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1 data-i18n="title">Til Flesland</h1>
+      <p class="from" id="from"></p>
+    </div>
+    <div class="ctl">
+      <div class="seg" role="group" aria-label="Language">
+        <button id="langNo" aria-pressed="true">NO</button>
+        <button id="langEn" aria-pressed="false">EN</button>
+      </div>
+      <button id="btnGps" aria-pressed="false" data-i18n="useGps">Bruk min posisjon</button>
+      <div class="buf">
+        <button id="bufMinus" aria-label="-">−</button>
+        <span><span data-i18n="margin">margin</span> <b id="bufVal">2 min</b></span>
+        <button id="bufPlus" aria-label="+">+</button>
+      </div>
+      <button id="btnRefresh" data-i18n="refresh">Oppdater</button>
+    </div>
+  </header>
+
+  <div class="msg" id="msg"></div>
+
+  <div class="cols">
+    <section class="col tram" id="colTram">
+      <div class="mode">Bybanen</div>
+      <div class="stop" id="tramStop">…</div>
+      <div class="walk"><b id="tramWalk">–</b><span><span data-i18n="minWalk">min å gå</span> · <span id="tramDist"></span></span></div>
+      <div class="verdict" id="tramVerdict"></div>
+      <ul class="deps" id="tramDeps"></ul>
+    </section>
+    <section class="col bus" id="colBus">
+      <div class="mode">Flybussen</div>
+      <div class="stop" id="busStop">…</div>
+      <div class="walk"><b id="busWalk">–</b><span><span data-i18n="minWalk">min å gå</span> · <span id="busDist"></span></span></div>
+      <div class="verdict" id="busVerdict"></div>
+      <ul class="deps" id="busDeps"></ul>
+    </section>
+  </div>
+
+  <footer id="foot"></footer>
+</main>
+
+<script>
+(() => {
+  const ENTUR = "https://api.entur.io/journey-planner/v3/graphql";
+  const CLIENT = "voodejord-flesland";
+  const OSRM_FOOT = "https://router.project-osrm.org/route/v1/foot/";
+  const HOME = { lat: 60.3898, lon: 5.3253, label: "Christian Michelsens gate 2B" };
+  const AIRPORT_RE = /flesland|lufthavn|airport/i;
+  const FLYBUSS_RE = /flybuss|airport/i;
+  const WALK_KMH = 4.8;
+
+  const T = {
+    no: { title: "Til Flesland", useGps: "Bruk min posisjon", useHome: "Bruk Chr. Michelsens gt 2B", margin: "margin", refresh: "Oppdater",
+          minWalk: "min å gå", from: "Fra", walkFrom: "gangtid fra", finding: "Finner nærmeste stopp …",
+          none: "Ingen avganger mot Flesland de neste 3 timene.", noStop: "Fant ikke stopp innen 1,5 km",
+          next: "Neste du rekker:", wait: "venter", min: "min", reach: "rekker", tight: "knapt", missed: "rekker ikke",
+          spare: "til gode", late: "for sein", cancelled: "innstilt", sched: "rutetid", missAll: "Rekker ingen av de neste avgangene.",
+          updated: "Oppdatert", src: "Avganger: Entur. Gangtid: OSRM/anslag. Margin = ekstra tid du vil ha på holdeplassen.",
+          gpsErr: "Posisjon avslått – bruker adressen", err: "Klarte ikke hente data: " },
+    en: { title: "To Flesland Airport", useGps: "Use my location", useHome: "Use Chr. Michelsens gt 2B", margin: "buffer", refresh: "Refresh",
+          minWalk: "min walk", from: "From", walkFrom: "walking time from", finding: "Finding nearest stops …",
+          none: "No departures to Flesland in the next 3 hours.", noStop: "No stop found within 1.5 km",
+          next: "Next you can make:", wait: "wait", min: "min", reach: "make it", tight: "tight", missed: "too late",
+          spare: "to spare", late: "too late", cancelled: "cancelled", sched: "scheduled", missAll: "Can't make any of the next departures.",
+          updated: "Updated", src: "Departures: Entur. Walking time: OSRM/estimate. Buffer = extra time you want at the stop.",
+          gpsErr: "Location denied – using the address", err: "Could not load data: " },
+  };
+
+  const $ = id => document.getElementById(id);
+  const lsGet = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch { return d; } };
+  const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
+
+  const state = {
+    lang: lsGet("lang", "no"),
+    bufferMin: +lsGet("buf", 2),
+    useGps: false,
+    pos: { ...HOME },
+    tram: { stop: null, walkSec: null, walkSrc: "", calls: [] },
+    bus:  { stop: null, walkSec: null, walkSrc: "", calls: [] },
+  };
+  const t = k => T[state.lang][k];
+
+  // ---------- Entur ----------
+  async function gql(query, variables) {
+    const r = await fetch(ENTUR, { method: "POST", headers: { "Content-Type": "application/json", "ET-Client-Name": CLIENT }, body: JSON.stringify({ query, variables }) });
+    if (!r.ok) throw new Error("Entur " + r.status);
+    const j = await r.json();
+    if (j.errors) throw new Error(j.errors[0].message);
+    return j.data;
+  }
+
+  async function nearestStops(lat, lon) {
+    const d = await gql(`query($lat:Float!,$lon:Float!){
+      nearest(latitude:$lat, longitude:$lon, maximumDistance:1500, maximumResults:25,
+              filterByPlaceTypes:[stopPlace], filterByModes:[tram,bus], multiModalMode:child){
+        edges{ node{ distance place{ ... on StopPlace{ id name latitude longitude } } } } }}`, { lat, lon });
+    return d.nearest.edges.map(e => ({ id: e.node.place.id, name: e.node.place.name, lat: e.node.place.latitude, lon: e.node.place.longitude, distance: e.node.distance }));
+  }
+
+  async function callsForStops(ids) {
+    const d = await gql(`query($ids:[String]!){
+      stopPlaces(ids:$ids){ id
+        estimatedCalls(numberOfDepartures:60, timeRange:10800){
+          aimedDepartureTime expectedDepartureTime realtime cancellation
+          destinationDisplay{ frontText }
+          serviceJourney{ transportMode line{ publicCode name } } } } }`, { ids });
+    const out = {};
+    for (const s of d.stopPlaces || []) {
+      if (!s) continue;
+      out[s.id] = s.estimatedCalls.map(c => ({
+        aimed: new Date(c.aimedDepartureTime), t: new Date(c.expectedDepartureTime),
+        realtime: c.realtime, cancelled: c.cancellation,
+        to: c.destinationDisplay?.frontText || "", mode: c.serviceJourney?.transportMode || "",
+        line: c.serviceJourney?.line?.publicCode || "", lineName: c.serviceJourney?.line?.name || "",
+      }));
+    }
+    return out;
+  }
+
+  const isTramToAirport = c => c.mode === "tram" && AIRPORT_RE.test(c.to);
+  const isFlybuss = c => c.mode === "bus" && (FLYBUSS_RE.test(c.lineName) || FLYBUSS_RE.test(c.line)) && AIRPORT_RE.test(c.to + " " + c.lineName);
+
+  // ---------- Gangtid ----------
+  function haversineKm(a, b) {
+    const R = 6371, toR = x => x * Math.PI / 180;
+    const dLat = toR(b.lat - a.lat), dLon = toR(b.lon - a.lon);
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(toR(a.lat)) * Math.cos(toR(b.lat)) * Math.sin(dLon / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(h));
+  }
+  async function walkTime(from, to) {
+    try {
+      const r = await fetch(`${OSRM_FOOT}${from.lon},${from.lat};${to.lon},${to.lat}?overview=false`);
+      const j = await r.json();
+      if (j.routes?.[0]) return { sec: j.routes[0].duration, src: "OSRM" };
+    } catch {}
+    return { sec: haversineKm(from, to) * 1.3 / WALK_KMH * 3600, src: state.lang === "no" ? "anslag" : "estimate" };
+  }
+
+  // ---------- Flyt ----------
+  async function load() {
+    $("msg").className = "msg"; $("msg").textContent = t("finding");
+    try {
+      const stops = await nearestStops(state.pos.lat, state.pos.lon);
+      const calls = await callsForStops(stops.map(s => s.id));
+      const pick = pred => {
+        for (const s of stops) { const c = (calls[s.id] || []).filter(pred); if (c.length) return { stop: s, calls: c }; }
+        return { stop: null, calls: [] };
+      };
+      const tr = pick(isTramToAirport), bu = pick(isFlybuss);
+      state.tram.stop = tr.stop; state.tram.calls = tr.calls;
+      state.bus.stop = bu.stop; state.bus.calls = bu.calls;
+      const [wt, wb] = await Promise.all([
+        tr.stop ? walkTime(state.pos, tr.stop) : null,
+        bu.stop ? walkTime(state.pos, bu.stop) : null,
+      ]);
+      if (wt) { state.tram.walkSec = wt.sec; state.tram.walkSrc = wt.src; }
+      if (wb) { state.bus.walkSec = wb.sec; state.bus.walkSrc = wb.src; }
+      $("msg").textContent = "";
+    } catch (e) { $("msg").className = "msg err"; $("msg").textContent = t("err") + (e.message || e); }
+    render();
+  }
+
+  async function refreshCalls() {
+    const ids = [state.tram.stop?.id, state.bus.stop?.id].filter(Boolean);
+    if (!ids.length) return load();
+    try {
+      const calls = await callsForStops(ids);
+      if (state.tram.stop) state.tram.calls = (calls[state.tram.stop.id] || []).filter(isTramToAirport);
+      if (state.bus.stop) state.bus.calls = (calls[state.bus.stop.id] || []).filter(isFlybuss);
+    } catch (e) { $("msg").className = "msg err"; $("msg").textContent = t("err") + (e.message || e); }
+    render();
+  }
+
+  // ---------- Rendering ----------
+  const hhmm = d => d.toLocaleTimeString(state.lang === "no" ? "nb-NO" : "en-GB", { hour: "2-digit", minute: "2-digit" });
+  const mins = ms => Math.round(ms / 60000);
+
+  function renderCol(key, ids) {
+    const s = state[key], now = Date.now();
+    const arrive = s.walkSec == null ? null : now + s.walkSec * 1000;
+    if (!s.stop) {
+      $(ids.stop).textContent = t("noStop"); $(ids.walk).textContent = "–"; $(ids.dist).textContent = "";
+      $(ids.verdict).className = "verdict"; $(ids.verdict).textContent = ""; $(ids.deps).innerHTML = ""; return;
+    }
+    $(ids.stop).textContent = s.stop.name;
+    $(ids.walk).textContent = s.walkSec == null ? "–" : Math.max(1, Math.round(s.walkSec / 60));
+    $(ids.dist).textContent = `${Math.round(s.stop.distance)} m` + (s.walkSrc ? ` (${s.walkSrc})` : "");
+
+    const calls = s.calls.filter(c => c.t.getTime() > now - 60000);
+    const ul = $(ids.deps); ul.innerHTML = "";
+    let first = null;
+    for (const c of calls) {
+      let status = "", m = "";
+      if (c.cancelled) { status = "miss"; m = t("cancelled"); }
+      else if (arrive == null) { m = `${mins(c.t - now)} ${t("min")}`; }
+      else {
+        const margin = mins(c.t - (arrive + state.bufferMin * 60000));
+        if (margin >= 3) { status = "go"; m = `${t("reach")} · ${margin} ${t("min")} ${t("spare")}`; }
+        else if (margin >= 0) { status = "wait"; m = `${t("tight")} · ${margin} ${t("min")}`; }
+        else { status = "miss"; m = `${t("missed")} · ${-margin} ${t("min")} ${t("late")}`; }
+        if (!first && status !== "miss") first = { ...c, margin };
+      }
+      const li = document.createElement("li");
+      li.className = `dep ${status}` + (first && first === Object(first) && first.t === c.t && first.to === c.to && !ul.querySelector(".first") ? " first" : "");
+      const rt = c.realtime ? "" : `<span class="rt">${t("sched")}</span>`;
+      const late = c.realtime && Math.abs(c.t - c.aimed) >= 60000 ? `<span class="rt">(${hhmm(c.aimed)})</span>` : "";
+      li.innerHTML = `<div class="t ${c.cancelled ? "cancel" : ""}">${hhmm(c.t)}${late}</div>
+        <div class="to">${c.to}<small>${c.line ? c.line + " · " : ""}${c.lineName}${rt}</small></div>
+        <div class="m">${m}</div>`;
+      ul.appendChild(li);
+    }
+    const v = $(ids.verdict);
+    if (!calls.length) { v.className = "verdict"; v.textContent = t("none"); }
+    else if (arrive == null) { v.className = "verdict"; v.textContent = ""; }
+    else if (!first) { v.className = "verdict miss"; v.textContent = t("missAll"); }
+    else {
+      v.className = `verdict ${first.margin >= 3 ? "go" : "wait"}`;
+      v.innerHTML = `${t("next")} <b>${hhmm(first.t)}</b> · ${t("wait")} ${mins(first.t - arrive)} ${t("min")}`;
+    }
+  }
+
+  function render() {
+    document.documentElement.lang = state.lang === "no" ? "nb" : "en";
+    document.querySelectorAll("[data-i18n]").forEach(el => el.textContent = t(el.dataset.i18n));
+    $("btnGps").textContent = state.useGps ? t("useHome") : t("useGps");
+    $("btnGps").setAttribute("aria-pressed", String(state.useGps));
+    $("langNo").setAttribute("aria-pressed", String(state.lang === "no"));
+    $("langEn").setAttribute("aria-pressed", String(state.lang === "en"));
+    $("bufVal").textContent = `${state.bufferMin} ${t("min")}`;
+    $("from").textContent = `${t("from")} ${state.useGps ? (state.lang === "no" ? "din posisjon" : "your location") : HOME.label}`;
+    renderCol("tram", { stop: "tramStop", walk: "tramWalk", dist: "tramDist", verdict: "tramVerdict", deps: "tramDeps" });
+    renderCol("bus",  { stop: "busStop",  walk: "busWalk",  dist: "busDist",  verdict: "busVerdict",  deps: "busDeps" });
+    $("foot").textContent = `${t("updated")} ${hhmm(new Date())}. ${t("src")}`;
+  }
+
+  // ---------- Knapper ----------
+  function setLang(l) { state.lang = l; lsSet("lang", l); render(); }
+  $("langNo").onclick = () => setLang("no");
+  $("langEn").onclick = () => setLang("en");
+  $("btnRefresh").onclick = refreshCalls;
+  const setBuf = v => { state.bufferMin = Math.max(0, Math.min(20, v)); lsSet("buf", state.bufferMin); render(); };
+  $("bufMinus").onclick = () => setBuf(state.bufferMin - 1);
+  $("bufPlus").onclick = () => setBuf(state.bufferMin + 1);
+  $("btnGps").onclick = () => {
+    if (state.useGps) { state.useGps = false; state.pos = { ...HOME }; return load(); }
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      p => { state.useGps = true; state.pos = { lat: p.coords.latitude, lon: p.coords.longitude }; load(); },
+      () => { $("msg").className = "msg err"; $("msg").textContent = t("gpsErr"); },
+      { enableHighAccuracy: true, timeout: 15000 });
+  };
+
+  render();
+  load();
+  setInterval(refreshCalls, 60000);
+})();
+</script>
+</body>
+</html>
