@@ -1,0 +1,35 @@
+
+== Boligsoner ==
+  [0] Boligsoner (?)
+      (kunne ikke lese lag: 'NoneType' object is not iterable )
+  [1] Boligsoner (esriGeometryPolygon)
+      felt: OBJECTID, sone, sone_navn, Status, Sonekort, Elbil, Besøkende, Pris, Shape, Shape.STArea(), Shape.STLength()
+      maxRecordCount: 2000
+
+== Parkeringskart_bergenskart2023 ==
+  [0] Utvid kartlagene (?)
+      (kunne ikke lese lag: 'NoneType' object is not iterable )
+  [1] Parkeringsautomater (esriGeometryPoint)
+      felt: OBJECTID, Type, publikum_Gate, publikum_PBetingelser, Automatnummer, pubklikum_AntallPlasser, publikum_tilleggsinfo, Shape
+      maxRecordCount: 2000
+      Type-verdier: ['552 Automat', '552 Parkometer']
+  [2] HC-parkering (esriGeometryPoint)
+      felt: OBJECTID, adressenavn, informasjon, gatelangsparkering, fortauskant_mindre_enn25cm, overbygg_parkeringsplaa, stigninggrader, byggingpagar, bredde_cm, lengde_cm, bildefil1, bildefil2, bildefil3, bilde1_t, bilde2_t, bilde3_t, SHAPE
+      maxRecordCount: 2000
+  [3] Parkometer (esriGeometryPoint)
+      felt: OBJECTID, Type, publikum_Gate, publikum_PBetingelser, Automatnummer, pubklikum_AntallPlasser, publikum_tilleggsinfo, Shape
+      maxRecordCount: 2000
+      Type-verdier: ['552 Automat', '552 Parkometer']
+  [4] EL-Ladeplass (esriGeometryPoint)
+      felt: publikum_Gate, publikum_PBetingelser, pubklikum_AntallPlasser, publikum_tilleggsinfo, OBJECTID, Shape
+      maxRecordCount: 2000
+
+== Parkeringsforbud_boligsone ==
+  [0] Parkeringsforbud_boligsone (esriGeometryPolygon)
+      felt: OBJECTID, sone_navn, Shape, Shape.STArea(), Shape.STLength()
+      maxRecordCount: 2000
+
+== Boligsoneautomater ==
+  [0] Boligsoneautomater (esriGeometryPoint)
+      felt: OBJECTID, Shape
+      maxRecordCount: 2000
