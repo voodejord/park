@@ -1,0 +1,8 @@
+type 43 parkeringsomrader: 4 obj
+  felt: ['Antall parkeringspl. med lading, små kjt.', 'Antall parkeringspl. med lading, store kjt.', 'Antall parkeringsplasser små kjt.', 'Antall parkeringsplasser store kjt.', 'Areal', 'Eier', 'Etableringsår', 'Geometri, flate', 'Innfartsparkering', 'Navn', 'Plasser reservert handikappede', 'Prosjektreferanse', 'Type', 'Vedlikeholdsansvarlig', 'nvdb_id', 'type', 'veglenkesekvenser', 'vegsystem']
+type 47 trafikklommer: 115 obj
+  felt: ['Areal', 'Belysning', 'Bredde', 'Bruksområde', 'Dekketype', 'Eier', 'Etableringsår', 'Geometri, flate', 'Geometri, punkt', 'Lengde med full bredde', 'Navn', 'Prosjektreferanse', 'Spesielt parkeringsformål', 'Tilleggsinformasjon', 'Utforming', 'Vedlikeholdsansvarlig', 'Vinteråpen', 'nvdb_id', 'type', 'veglenkesekvenser', 'vegsystem']
+type 538 adresser: 1476 obj
+  felt: ['Adressekode', 'Adressenavn', 'Kommune', 'Sideveg', 'nvdb_id', 'type', 'veglenkesekvenser', 'vegsystem']
+gatenavn.json: 1373 veglenkesekvenser
+datakatalog: 31 typer nevner parkering

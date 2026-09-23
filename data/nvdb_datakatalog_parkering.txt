@@ -1,0 +1,31 @@
+5: Rekkverk – En anordning som skal hindre at kjøretøy forlater vegen (Håndbok N101).
+39: Rasteplass – Sted ved vegen der vegtrafikanter kan parkere og hvile. En rasteplass skal ha direkte tilknytning til vegen, være adskil
+41: Ferjeoppstillingsplass – Område for oppstilling og venting for kjøretøy som skal videre med ferje. Areal til rasting, parkering etc. registreres 
+42: Kollektivknutepunkt – Sted i kollektivnettet der kollektivlinjer korresponderer med hverandre. Knutepunktet binder kollektivnettet sammen til 
+43: Parkeringsområde – Område avsatt til parkering for kjøretøy. På et parkeringsområde vil det normalt være en eller flere parkeringsplasser (
+46: Avkjørsel – Kjørbar tilknytning til vegnettet for en eiendom eller et begrenset antall eiendommer. Merknad: Det regnes som vegkryss 
+47: Trafikklomme – Kjøreareal som ligger inntil ytterste kjørefelt. Det kan være trafikkdeler mellom kjørefelt og trafikklomme.
+57: Skjæring – Skråflate som er del av begrensningen av at skjæringsvolum. I tillegg til ei eller to skjæringer (ev. en på hver side av
+64: Ferjekai – Sted med en eller flere ferjelemmer hvor ferje anløper for å ta om bord og slippe av kjøretøy og passasjerer. Inkluderer
+87: Belysningspunkt – Lokasjon/konteiner med samling av en eller flere lysarmaturer og lysmast i ett punkt. Det kan forekomme varianter uten l
+89: Signalanlegg – System for regulering og varsling av trafikk. Det er sammensatt av flere signalpunkt med tilhørende signalhoder og blir 
+91: Signalhode – Innfatning med ett eller flere lys/lamper som til sammen danner et trafikklyssignal.
+96: Skiltplate – Plate med skiltmotiv.
+99: Vegoppmerking, langsgående – Vegoppmerking nyttes for å lede, varsle eller regulere trafikken, og for å klargjøre andre bestemmelser gitt ved trafikk
+110: Service – Vegobjekt som gir informasjon om service som er aktuell for trafikantene.
+297: Kommentar – Vegobjekt beskriver spesielle forhold for det objektet det er knyttet til.
+446: Dokumentasjon – Arkivert informasjon, kan f.eks. være bilder, tegninger, tekniske beskrivelser eller bare lenker til lokale filer,  webs
+451: Sykkelparkering – Angir område tilrettelagt for sykkelparkering.
+487: Holdeplassutrustning – Sted for på og avstigning av kollektivtrafikk.
+519: Vegoppmerking, tverrgående – Vegoppmerking som ikke har nevneverdig langsgående utstrekning. Eks symbol, sperreområder, piler, tekst, gangfelt og ann
+570: Trafikkulykke – Informasjon om ulykkessted, værforhold, skadeomfang m.m. Gjelder primært ulykker med personskader.
+571: Ulykkesinvolvert enhet – Enheter involvert i ulykken. En fotgjenger regnes også som en enhet. Se kjøretøytype.
+623: Stativ for turistinfo – Konstruksjon beregnet for oppsetting av informasjon til trafikanter, eksempelvis informasjon rettet mot turister. Disse 
+761: Tilstand/skade, punkt – Gir informasjon om tilstand og eventuell skade. Normalt knyttet til et spesifikt punktobjekt.
+819: Fordeling – Tavle/skap/koblingsboks/punkt hvor strøm fordeles til teknisk utstyr. Benyttes bl.a. i forbindelse med tunnelutstyr.
+835: Gangadkomst – Beskriver hvordan hovedadkomst for gående er utformet, dette gjelder adkomst fra biloppstilling/kollektivtrafikk til ang
+837: Belegning – Område utenfor selve kjørebanen som har egen belegning. Kan også være kjørebane på områder/veger som ikke har eget vegne
+876: Overvannsrenne – "Konstruksjon innfelt i vegens kjøreareal/skulder som fører overvann til lukket dreneringssystem eller grøft. Benyttes l
+882: Vannhåndteringsanlegg – Punkt som representerer systemer som samler opp drensvann og overvann før utslipp i resipient, inkludert tunnelvaskevann
+1017: Turistvegattraksjon (test) – Rasteplass/utsiktspunkt langs en Nasjonal turistveg der arkitektur, landskapsarkitektur og/eller kunst brukes for å fors
+1019: Sykkelrasteplass (test) – Sykkelrasteplass er et tilrettelagt stoppested primært for syklister og gående, og som ikke tilfredsstiller kravene til 
