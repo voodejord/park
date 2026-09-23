@@ -94,12 +94,6 @@ window.KART_CONFIG = {
       paa: true,
       merknad: "Frivillig kartlagt. Kun objekter tagget permit/Soneparkering/P-kort (8 stk) og beboeranlegg. Dekning tynn."
     },
-    manuell: {
-      tittel: "Beboerparkering – manuelt verifisert",
-      snapshot: "data/beboerparkering_manuell.geojson",
-      paa: false,
-      merknad: "Strekninger dokumentert via skiltplan, feltobservasjon eller vedtak. Se status-felt per objekt."
-    }
   },
 
   // Klassifisering av kommunens Type-/betingelsesfelt til kartkategorier.
