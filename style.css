@@ -71,3 +71,11 @@ body {
   #togglePanel { display: block; }
 }
 @media (prefers-reduced-motion: reduce) { #panel { transition: none; } }
+
+.tegnfelt { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 6px 0; }
+.tegnfelt input, .tegnfelt select, #tegnUt {
+  width: 100%; padding: 5px 7px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--ink); font: inherit; font-size: 13px;
+}
+.tegnfelt input:first-child { grid-column: 1 / -1; }
+#tegnKnapp { width: 100%; padding: 7px; border: 1px solid var(--accent); border-radius: 4px; background: var(--accent); color: #fff; font: inherit; cursor: pointer; }
+#tegnUt { margin-top: 8px; font-family: ui-monospace, Menlo, monospace; font-size: 11px; }
