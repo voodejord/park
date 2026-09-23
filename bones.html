@@ -170,7 +170,8 @@
   const CLIENT = "voodejord-bones";
   const HOME = { lat: 60.3898, lon: 5.3253, label: "Christian Michelsens gate 2B" };
   const DEST_NAME = "Bønes senter";
-  const LINES = new Set(["14", "15"]);          // Skyss-linjer som går til Bønes
+  const LINES = new Set(["15"]);                // Skyss-linje Bergen sentrum – Bønes
+  const BACK_RE = /sentrum/i;                   // retur: kun mot Bergen sentrum (14 går til busstasjonen/Fyllingsdalen)
   const DEST_RE = /bønes/i;
   const PREFER_OUT_STOP = /olav kyrres/i;      // påstigning i byen
   const RETURN_ALIGHT = "Festplassen";          // avstigning i byen på retur
@@ -243,6 +244,7 @@
     for (const tp of patterns) {
       const legs = tp.legs || [];
       const bus = legs.find(l => l.mode === "bus"); if (!bus) continue;
+      if (!LINES.has(bus.line?.publicCode || "")) continue;
       const preWalk = legs.filter(l => l.mode === "foot" && legs.indexOf(l) < legs.indexOf(bus)).reduce((a, l) => a + l.duration, 0);
       const postWalk = legs.filter(l => l.mode === "foot" && legs.indexOf(l) > legs.indexOf(bus)).reduce((a, l) => a + l.duration, 0);
       rows.push({
@@ -312,7 +314,7 @@
     const stops = await nearestBusStops(state.dest.lat, state.dest.lon, 400);
     const calls = await callsForStops(stops.map(x => x.id));
     for (const st of stops) {
-      const c = (calls[st.id] || []).filter(x => LINES.has(x.line) && !DEST_RE.test(x.to));
+      const c = (calls[st.id] || []).filter(x => LINES.has(x.line) && BACK_RE.test(x.to) && !DEST_RE.test(x.to));
       if (c.length) { DEBUG.push(`back fallback: ${st.name}`); return { stop: st, alight: RETURN_ALIGHT, walkSec: null, rideMin: null, calls: c.map(x => ({ ...x, toStop: RETURN_ALIGHT })) }; }
     }
     return { stop: null, walkSec: null, rideMin: null, calls: [] };
