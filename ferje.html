@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rekker jeg ferja?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --sea: #0d1a26;        /* bakgrunn – fjord om kvelden */
+    --deck: #15283a;       /* flater */
+    --rail: #24405a;       /* skillelinjer */
+    --foam: #e9f0f6;       /* tekst */
+    --mist: #8ea3b8;       /* sekundærtekst */
+    --go: #37d99a;         /* rekker */
+    --wait: #f6c453;       /* knapt */
+    --miss: #ff6a5c;       /* rekker ikke */
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  *, *::before, *::after { box-sizing: inherit; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--sea);
+    color: var(--foam);
+    font-family: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 22px;
+    line-height: 1.3;
+    -webkit-tap-highlight-color: transparent;
+  }
+  main { max-width: 1180px; margin: 0 auto; padding: 20px 28px 40px; }
+
+  /* Toppfelt: kai + ETA */
+  header {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 24px;
+    align-items: end;
+    padding-bottom: 20px;
+    border-bottom: 2px solid var(--rail);
+  }
+  .quay-name { font-size: 46px; font-weight: 700; margin: 0; line-height: 1.05; }
+  .quay-sub { color: var(--mist); margin: 6px 0 0; font-size: 22px; }
+  .eta { text-align: right; }
+  .eta-num { font-size: 96px; font-weight: 700; line-height: 0.9; letter-spacing: -0.02em; }
+  .eta-lbl { color: var(--mist); font-size: 22px; }
+
+  /* Verdikt */
+  .verdict {
+    margin: 24px 0;
+    padding: 22px 26px;
+    border-radius: 18px;
+    background: var(--deck);
+    border-left: 12px solid var(--rail);
+    font-size: 30px;
+    min-height: 92px;
+    display: flex; align-items: center; gap: 18px;
+  }
+  .verdict.go { border-left-color: var(--go); }
+  .verdict.wait { border-left-color: var(--wait); }
+  .verdict.miss { border-left-color: var(--miss); }
+  .verdict b { font-size: 40px; }
+
+  /* Avganger */
+  .deps { list-style: none; margin: 0; padding: 0; }
+  .dep {
+    display: grid;
+    grid-template-columns: 130px 1fr auto;
+    gap: 20px;
+    align-items: center;
+    padding: 18px 8px;
+    border-bottom: 1px solid var(--rail);
+  }
+  .dep .t { font-size: 40px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .dep .to { font-size: 24px; }
+  .dep .to small { display: block; color: var(--mist); font-size: 18px; margin-top: 2px; }
+  .dep .m { font-size: 24px; text-align: right; white-space: nowrap; }
+  .dep.go .m { color: var(--go); }
+  .dep.wait .m { color: var(--wait); }
+  .dep.miss { opacity: .45; }
+  .dep.miss .m { color: var(--miss); }
+  .dep.first { background: rgba(55,217,154,.08); border-radius: 12px; }
+  .dep .rt { color: var(--mist); font-size: 16px; margin-left: 8px; }
+  .dep .cancel { color: var(--miss); text-decoration: line-through; }
+
+  /* Kontroller – store treffflater for bilskjerm */
+  .bar { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 26px; align-items: center; }
+  button {
+    font: inherit; color: var(--foam);
+    background: var(--deck); border: 2px solid var(--rail);
+    border-radius: 14px; padding: 16px 22px; min-height: 64px; min-width: 64px;
+    cursor: pointer;
+  }
+  button:focus-visible { outline: 3px solid var(--wait); outline-offset: 2px; }
+  button[aria-pressed="true"] { border-color: var(--foam); }
+  .buf { display: flex; align-items: center; gap: 10px; color: var(--mist); }
+  .buf b { color: var(--foam); min-width: 70px; text-align: center; }
+
+  /* Kaivelger */
+  .quays { list-style: none; margin: 18px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+  .quays button { width: 100%; text-align: left; display: flex; justify-content: space-between; gap: 12px; }
+  .quays span { color: var(--mist); }
+  .hidden { display: none; }
+  .msg { color: var(--mist); padding: 40px 0; text-align: center; font-size: 24px; }
+  .msg.err { color: var(--miss); }
+  footer { color: var(--mist); font-size: 16px; margin-top: 30px; }
+
+  @media (max-width: 720px) {
+    body { font-size: 18px; }
+    header { grid-template-columns: 1fr; }
+    .eta { text-align: left; }
+    .eta-num { font-size: 72px; }
+    .quay-name { font-size: 34px; }
+    .dep { grid-template-columns: 96px 1fr; }
+    .dep .m { grid-column: 1 / -1; text-align: left; }
+    .dep .t { font-size: 32px; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .verdict { transition: border-left-color .3s; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1 class="quay-name" id="quayName">Finner nærmeste ferjekai …</h1>
+      <p class="quay-sub" id="quaySub">Trenger posisjon fra bilen</p>
+    </div>
+    <div class="eta">
+      <div class="eta-num" id="etaNum">–</div>
+      <div class="eta-lbl" id="etaLbl">min kjøretid</div>
+    </div>
+  </header>
+
+  <div class="verdict" id="verdict">Venter på posisjon og avganger.</div>
+
+  <ul class="deps" id="deps"></ul>
+  <div class="msg" id="msg"></div>
+
+  <div class="bar">
+    <button id="btnQuays" aria-expanded="false">Bytt kai</button>
+    <button id="btnRefresh">Oppdater</button>
+    <div class="buf">
+      <button id="bufMinus" aria-label="Mindre margin">−</button>
+      <span>margin <b id="bufVal">4 min</b></span>
+      <button id="bufPlus" aria-label="Mer margin">+</button>
+    </div>
+    <button id="btnCars" aria-pressed="true">Kun bilferje</button>
+  </div>
+  <ul class="quays hidden" id="quays"></ul>
+
+  <footer id="foot">Avganger: Entur. Kjøretid: OSRM. Margin er tid du vil ha på kai før avgang (kø, betaling).</footer>
+</main>
+
+<script>
+(() => {
+  const ENTUR = "https://api.entur.io/journey-planner/v3/graphql";
+  const CLIENT = "voodejord-ferjeapp";
+  const OSRM = "https://router.project-osrm.org/route/v1/driving/";
+  const CAR_FERRY = new Set(["localCarFerry", "nationalCarFerry", "regionalCarFerry", "internationalCarFerry", "roadFerryLink"]);
+
+  const $ = id => document.getElementById(id);
+  const state = {
+    pos: null,            // {lat, lon}
+    quays: [],            // [{id, name, lat, lon, distance}]
+    quay: null,
+    driveSec: null,       // sekunder kjøretid
+    driveSource: "",
+    bufferMin: +localStorageGet("buf", 4),
+    carsOnly: localStorageGet("cars", "1") === "1",
+    calls: [],
+    timer: null,
+  };
+
+  function localStorageGet(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch { return d; } }
+  function localStorageSet(k, v) { try { localStorage.setItem(k, v); } catch {} }
+
+  // ---------- Entur ----------
+  async function gql(query, variables) {
+    const r = await fetch(ENTUR, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "ET-Client-Name": CLIENT },
+      body: JSON.stringify({ query, variables }),
+    });
+    if (!r.ok) throw new Error("Entur svarte " + r.status);
+    const j = await r.json();
+    if (j.errors) throw new Error(j.errors[0].message);
+    return j.data;
+  }
+
+  async function nearestQuays(lat, lon) {
+    const d = await gql(`query($lat:Float!,$lon:Float!){
+      nearest(latitude:$lat, longitude:$lon, maximumDistance:80000, maximumResults:12,
+              filterByPlaceTypes:[stopPlace], filterByModes:[water], multiModalMode:child){
+        edges{ node{ distance place{ ... on StopPlace{ id name latitude longitude } } } }
+      }}`, { lat, lon });
+    return d.nearest.edges.map(e => ({
+      id: e.node.place.id, name: e.node.place.name,
+      lat: e.node.place.latitude, lon: e.node.place.longitude, distance: e.node.distance,
+    }));
+  }
+
+  async function departures(id) {
+    const d = await gql(`query($id:String!){
+      stopPlace(id:$id){
+        estimatedCalls(numberOfDepartures:20, timeRange:21600){
+          aimedDepartureTime expectedDepartureTime realtime cancellation
+          destinationDisplay{ frontText }
+          serviceJourney{ transportSubmode line{ publicCode name } }
+        }}}`, { id });
+    return (d.stopPlace?.estimatedCalls || []).map(c => ({
+      aimed: new Date(c.aimedDepartureTime),
+      t: new Date(c.expectedDepartureTime),
+      realtime: c.realtime, cancelled: c.cancellation,
+      to: c.destinationDisplay?.frontText || "",
+      line: c.serviceJourney?.line?.publicCode || "",
+      lineName: c.serviceJourney?.line?.name || "",
+      submode: c.serviceJourney?.transportSubmode || "",
+    }));
+  }
+
+  // ---------- Kjøretid ----------
+  function haversineKm(a, b) {
+    const R = 6371, toR = x => x * Math.PI / 180;
+    const dLat = toR(b.lat - a.lat), dLon = toR(b.lon - a.lon);
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(toR(a.lat)) * Math.cos(toR(b.lat)) * Math.sin(dLon / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(h));
+  }
+  async function driveTime(from, to) {
+    try {
+      const r = await fetch(`${OSRM}${from.lon},${from.lat};${to.lon},${to.lat}?overview=false`);
+      const j = await r.json();
+      if (j.routes?.[0]) return { sec: j.routes[0].duration, src: "OSRM" };
+    } catch {}
+    const km = haversineKm(from, to) * 1.35;          // veifaktor
+    return { sec: km / 55 * 3600, src: "anslag" };    // 55 km/t snitt
+  }
+
+  // ---------- Rendering ----------
+  const hhmm = d => d.toLocaleTimeString("nb-NO", { hour: "2-digit", minute: "2-digit" });
+  const mins = ms => Math.round(ms / 60000);
+
+  function render() {
+    if (!state.quay) return;
+    $("quayName").textContent = state.quay.name;
+    $("quaySub").textContent = `${(state.quay.distance / 1000).toFixed(1)} km unna` + (state.driveSource ? ` · kjøretid fra ${state.driveSource}` : "");
+
+    const now = Date.now();
+    const arrive = state.driveSec == null ? null : now + state.driveSec * 1000;
+    $("etaNum").textContent = state.driveSec == null ? "–" : Math.round(state.driveSec / 60);
+    $("etaLbl").textContent = arrive ? `min kjøretid · på kai ${hhmm(new Date(arrive))}` : "min kjøretid";
+
+    let calls = state.calls.filter(c => c.t.getTime() > now - 60000);
+    if (state.carsOnly) {
+      const cf = calls.filter(c => CAR_FERRY.has(c.submode));
+      if (cf.length) calls = cf;   // fall tilbake til alt hvis kaia ikke har bilferje-koding
+    }
+
+    const list = $("deps");
+    list.innerHTML = "";
+    let first = null;
+    for (const c of calls) {
+      const li = document.createElement("li");
+      let status = "", mtext = "";
+      if (c.cancelled) { status = "miss"; mtext = "innstilt"; }
+      else if (arrive == null) { mtext = `om ${mins(c.t - now)} min`; }
+      else {
+        const margin = mins(c.t - (arrive + state.bufferMin * 60000));
+        if (margin >= 5) { status = "go"; mtext = `rekker · ${margin} min til gode`; }
+        else if (margin >= 0) { status = "wait"; mtext = `knapt · ${margin} min`; }
+        else { status = "miss"; mtext = `rekker ikke · ${-margin} min for sein`; }
+        if (!first && status !== "miss") first = { ...c, margin };
+      }
+      li.className = `dep ${status}` + (first && first.t === c.t && !li.dataset.marked ? " first" : "");
+      const rt = c.realtime ? "" : `<span class="rt">rutetid</span>`;
+      const late = c.realtime && Math.abs(c.t - c.aimed) >= 60000 ? `<span class="rt">(${hhmm(c.aimed)})</span>` : "";
+      li.innerHTML = `
+        <div class="t ${c.cancelled ? "cancel" : ""}">${hhmm(c.t)}${late}</div>
+        <div class="to">${c.to}<small>${c.line ? c.line + " · " : ""}${c.lineName}${rt}</small></div>
+        <div class="m">${mtext}</div>`;
+      list.appendChild(li);
+    }
+    // Merk kun første rekkbare
+    list.querySelectorAll(".first").forEach((el, i) => { if (i > 0) el.classList.remove("first"); });
+
+    const v = $("verdict");
+    if (!calls.length) { v.className = "verdict"; v.textContent = "Ingen avganger neste 6 timer fra denne kaia."; }
+    else if (arrive == null) { v.className = "verdict"; v.textContent = "Har avganger, mangler kjøretid."; }
+    else if (!first) { v.className = "verdict miss"; v.innerHTML = `Rekker ingen av de neste ${calls.length} avgangene med ${state.bufferMin} min margin.`; }
+    else {
+      const wait = mins(first.t - arrive);
+      v.className = `verdict ${first.margin >= 5 ? "go" : "wait"}`;
+      v.innerHTML = `Neste du rekker: <b>${hhmm(first.t)}</b> mot ${first.to} · venter ${wait} min på kai`;
+    }
+    $("msg").textContent = "";
+    $("foot").textContent = `Oppdatert ${hhmm(new Date())}. Avganger: Entur. Kjøretid: ${state.driveSource || "–"}. Margin = tid du vil ha på kai før avgang.`;
+  }
+
+  function renderQuays() {
+    const ul = $("quays");
+    ul.innerHTML = "";
+    for (const q of state.quays) {
+      const li = document.createElement("li");
+      const b = document.createElement("button");
+      b.innerHTML = `${q.name}<span>${(q.distance / 1000).toFixed(1)} km</span>`;
+      b.onclick = () => { selectQuay(q); ul.classList.add("hidden"); $("btnQuays").setAttribute("aria-expanded", "false"); };
+      li.appendChild(b); ul.appendChild(li);
+    }
+  }
+
+  // ---------- Flyt ----------
+  async function selectQuay(q) {
+    state.quay = q; state.calls = []; state.driveSec = null; state.driveSource = "";
+    localStorageSet("quay", q.id);
+    render();
+    const [dt, calls] = await Promise.all([driveTime(state.pos, q), departures(q.id).catch(e => { showErr(e); return []; })]);
+    state.driveSec = dt.sec; state.driveSource = dt.src; state.calls = calls;
+    render();
+  }
+
+  async function refresh() {
+    if (!state.quay) return;
+    try {
+      const [dt, calls] = await Promise.all([driveTime(state.pos, state.quay), departures(state.quay.id)]);
+      state.driveSec = dt.sec; state.driveSource = dt.src; state.calls = calls;
+      render();
+    } catch (e) { showErr(e); }
+  }
+
+  function showErr(e) { const m = $("msg"); m.className = "msg err"; m.textContent = "Klarte ikke hente data: " + (e.message || e); }
+
+  async function onPosition(lat, lon) {
+    const firstFix = !state.pos;
+    state.pos = { lat, lon };
+    if (firstFix) {
+      try {
+        state.quays = await nearestQuays(lat, lon);
+        if (!state.quays.length) { $("quayName").textContent = "Ingen ferjekai innen 80 km"; return; }
+        renderQuays();
+        const saved = state.quays.find(q => q.id === localStorageGet("quay", ""));
+        await selectQuay(saved || state.quays[0]);
+      } catch (e) { showErr(e); }
+    } else {
+      // oppdater avstand til kaiene når bilen flytter seg
+      for (const q of state.quays) q.distance = haversineKm(state.pos, q) * 1000;
+    }
+  }
+
+  function start() {
+    if (!navigator.geolocation) { showErr(new Error("Nettleseren gir ikke posisjon")); return fallback(); }
+    navigator.geolocation.watchPosition(
+      p => onPosition(p.coords.latitude, p.coords.longitude),
+      err => { showErr(new Error("Posisjon avslått – viser kaier rundt Bergen")); fallback(); },
+      { enableHighAccuracy: true, maximumAge: 15000, timeout: 20000 }
+    );
+    state.timer = setInterval(refresh, 60000);
+  }
+  function fallback() { onPosition(60.3913, 5.3221); }   // Bergen sentrum
+
+  // ---------- Knapper ----------
+  $("btnQuays").onclick = e => {
+    const ul = $("quays"), open = ul.classList.toggle("hidden");
+    e.currentTarget.setAttribute("aria-expanded", String(!open));
+    renderQuays();
+  };
+  $("btnRefresh").onclick = refresh;
+  $("bufMinus").onclick = () => setBuf(state.bufferMin - 2);
+  $("bufPlus").onclick = () => setBuf(state.bufferMin + 2);
+  function setBuf(v) { state.bufferMin = Math.max(0, Math.min(30, v)); $("bufVal").textContent = state.bufferMin + " min"; localStorageSet("buf", state.bufferMin); render(); }
+  $("btnCars").onclick = e => { state.carsOnly = !state.carsOnly; e.currentTarget.setAttribute("aria-pressed", String(state.carsOnly)); localStorageSet("cars", state.carsOnly ? "1" : "0"); render(); };
+
+  setBuf(state.bufferMin);
+  $("btnCars").setAttribute("aria-pressed", String(state.carsOnly));
+  start();
+})();
+</script>
+</body>
+</html>
