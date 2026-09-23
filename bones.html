@@ -170,6 +170,9 @@
   const CLIENT = "voodejord-bones";
   const HOME = { lat: 60.3898, lon: 5.3253, label: "Christian Michelsens gate 2B" };
   const DEST_NAME = "Bønes senter";
+  const LINES = new Set(["14", "15"]);          // Skyss-linjer som går til Bønes
+  const DEST_RE = /bønes/i;
+  const DEBUG = [];
   const WALK_KMH = 4.8;
 
   const T = {
@@ -264,6 +267,57 @@
     };
   }
 
+  // ---------- Fallback: avganger direkte fra stopp ----------
+  async function nearestBusStops(lat, lon, maxDist) {
+    const d = await gql(`query($lat:Float!,$lon:Float!,$md:Int!){
+      nearest(latitude:$lat, longitude:$lon, maximumDistance:$md, maximumResults:20,
+              filterByPlaceTypes:[stopPlace], filterByModes:[bus], multiModalMode:child){
+        edges{ node{ distance place{ ... on StopPlace{ id name latitude longitude } } } } }}`, { lat, lon, md: maxDist });
+    return d.nearest.edges.map(e => ({ id: e.node.place.id, name: e.node.place.name, lat: e.node.place.latitude, lon: e.node.place.longitude, distance: e.node.distance }));
+  }
+  async function callsForStops(ids) {
+    const d = await gql(`query($ids:[String]!){
+      stopPlaces(ids:$ids){ id
+        estimatedCalls(numberOfDepartures:60, timeRange:10800){
+          aimedDepartureTime expectedDepartureTime realtime cancellation
+          destinationDisplay{ frontText } serviceJourney{ id line{ publicCode name } } } } }`, { ids });
+    const out = {};
+    for (const sp of d.stopPlaces || []) if (sp) out[sp.id] = sp.estimatedCalls.map(c => ({
+      t: new Date(c.expectedDepartureTime), aimed: new Date(c.aimedDepartureTime), realtime: c.realtime, cancelled: c.cancellation,
+      to: c.destinationDisplay?.frontText || "", line: c.serviceJourney?.line?.publicCode || "", lineName: c.serviceJourney?.line?.name || "",
+      sj: c.serviceJourney?.id, end: null,
+    }));
+    return out;
+  }
+  async function fallbackOut() {
+    const stops = await nearestBusStops(state.pos.lat, state.pos.lon, 1200);
+    const calls = await callsForStops(stops.map(x => x.id));
+    for (const st of stops) {
+      const c = (calls[st.id] || []).filter(x => LINES.has(x.line) && DEST_RE.test(x.to));
+      if (c.length) {
+        const walk = haversineKm(state.pos, st) * 1.3 / WALK_KMH * 3600;
+        DEBUG.push(`out fallback: ${st.name}`);
+        return { stop: st, walkSec: walk, rideMin: null, calls: c.map(x => ({ ...x, end: null })) };
+      }
+    }
+    return { stop: null, walkSec: null, rideMin: null, calls: [] };
+  }
+  async function fallbackBack() {
+    const stops = await nearestBusStops(state.dest.lat, state.dest.lon, 400);
+    const calls = await callsForStops(stops.map(x => x.id));
+    for (const st of stops) {
+      const c = (calls[st.id] || []).filter(x => LINES.has(x.line) && !DEST_RE.test(x.to));
+      if (c.length) { DEBUG.push(`back fallback: ${st.name}`); return { stop: st, walkSec: null, rideMin: null, calls: c }; }
+    }
+    return { stop: null, walkSec: null, rideMin: null, calls: [] };
+  }
+  function haversineKm(a, b) {
+    const R = 6371, toR = x => x * Math.PI / 180;
+    const dLat = toR(b.lat - a.lat), dLon = toR(b.lon - a.lon);
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(toR(a.lat)) * Math.cos(toR(b.lat)) * Math.sin(dLon / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(h));
+  }
+
   // ---------- Flyt ----------
   async function load() {
     $("msg").className = "msg"; $("msg").textContent = t("finding");
@@ -272,8 +326,14 @@
       const from = { coordinates: { latitude: state.pos.lat, longitude: state.pos.lon } };
       const home = { coordinates: { latitude: HOME.lat, longitude: HOME.lon } };
       const dest = { place: state.dest.id };
-      const [po, pb] = await Promise.all([trips(from, dest), trips(dest, home)]);
-      const o = digest(po, true), b = digest(pb, false);
+      DEBUG.length = 0; DEBUG.push(`dest: ${state.dest.name} (${state.dest.id})`);
+      let po = [], pb = [];
+      try { [po, pb] = await Promise.all([trips(from, dest), trips(dest, home)]); }
+      catch (e) { DEBUG.push("trip: " + (e.message || e)); }
+      DEBUG.push(`trip patterns out=${po.length} back=${pb.length}`);
+      let o = digest(po, true), b = digest(pb, false);
+      if (!o.calls.length) o = await fallbackOut();
+      if (!b.calls.length) b = await fallbackBack();
       Object.assign(state.out, o, { expanded: state.out.expanded });
       Object.assign(state.back, b, { expanded: state.back.expanded });
       $("msg").textContent = "";
@@ -321,7 +381,7 @@
       li.className = `dep ${status}` + (first && first.sj === c.sj && !ul.querySelector(".first") ? " first" : "");
       const rt = c.realtime ? "" : `<span class="rt">${t("sched")}</span>`;
       const late = c.realtime && Math.abs(c.t - c.aimed) >= 60000 ? `<span class="rt">(${hhmm(c.aimed)})</span>` : "";
-      const arrTxt = key === "out" ? `→ ${hhmm(c.end)} ${t("arrOut")}` : `→ ${hhmm(c.end)} ${t("arrBack")} ${c.toStop || ""}`.trim();
+      const arrTxt = !c.end ? "" : key === "out" ? `→ ${hhmm(c.end)} ${t("arrOut")}` : `→ ${hhmm(c.end)}`;
       li.innerHTML = `<div class="t">${hhmm(c.t)}${late}</div>
         <span class="badge sm">🚌 ${c.line || "?"}</span>
         <div class="to">${c.to}<span class="arr">${arrTxt}</span><small>${c.lineName}${rt}</small></div>
@@ -335,9 +395,9 @@
     }
     const v = $(ids.verdict);
     if (!all.length) { v.className = "verdict"; v.textContent = t("none"); }
-    else if (arrive == null) { const n = all[0]; v.className = "verdict go"; v.innerHTML = `<b>${hhmm(n.t)}</b> · ${t("leavesIn")} ${mins(n.t - now)} ${t("min")} → ${hhmm(n.end)}`; }
+    else if (arrive == null) { const n = all[0]; v.className = "verdict go"; v.innerHTML = `<b>${hhmm(n.t)}</b> · ${t("leavesIn")} ${mins(n.t - now)} ${t("min")}` + (n.end ? ` → ${hhmm(n.end)}` : ""); }
     else if (!first) { v.className = "verdict miss"; v.textContent = t("missAll"); }
-    else { v.className = `verdict ${first.margin >= 3 ? "go" : "wait"}`; v.innerHTML = `${t("next")} <b>${hhmm(first.t)}</b> · ${t("wait")} ${mins(first.t - arrive)} ${t("min")} → ${hhmm(first.end)} ${t("arrOut")}`; }
+    else { v.className = `verdict ${first.margin >= 3 ? "go" : "wait"}`; v.innerHTML = `${t("next")} <b>${hhmm(first.t)}</b> · ${t("wait")} ${mins(first.t - arrive)} ${t("min")}` + (first.end ? ` → ${hhmm(first.end)} ${t("arrOut")}` : ""); }
   }
 
   function render() {
@@ -351,7 +411,7 @@
     $("from").textContent = `${t("from")} ${state.useGps ? t("yourPos") : HOME.label}`;
     renderCol("out",  { stop: "outStop", walk: "outWalk", dist: "outDist", ride: "outRide", badge: "outBadge", google: "outGoogle", apple: "outApple", verdict: "outVerdict", deps: "outDeps" }, true);
     renderCol("back", { stop: "backStop", walk: "backWalk", ride: "backRide", badge: "backBadge", verdict: "backVerdict", deps: "backDeps" }, false);
-    $("foot").textContent = `${t("updated")} ${hhmm(new Date())}. ${t("src")}`;
+    $("foot").textContent = `${t("updated")} ${hhmm(new Date())}. ${t("src")}` + (location.hash === "#debug" ? " · " + DEBUG.join(" · ") : "");
   }
 
   // ---------- Knapper ----------
