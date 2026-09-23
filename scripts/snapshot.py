@@ -21,7 +21,9 @@ ROT = Path(__file__).resolve().parent.parent / "data"
 # Hold i synk med config.js
 LAG = {
     "sonegrenser":      ("Boligsoner/MapServer/1", "sone IN ('1','2','3')"),
-    "parkeringskart":   ("Parkeringskart_bergenskart2023/MapServer/0", "1=1"),
+    "parkeringskart":   ("Parkeringskart_bergenskart2023/MapServer/1", "1=1"),
+    "lading":           ("Parkeringskart_bergenskart2023/MapServer/4", "1=1"),
+    "hc":               ("Parkeringskart_bergenskart2023/MapServer/2", "1=1"),
     "parkeringsforbud": ("Parkeringsforbud_boligsone/MapServer/0", "1=1"),
     "automater":        ("Boligsoneautomater/MapServer/0", "1=1"),
 }
@@ -45,7 +47,7 @@ def hent_lag(service, where):
             "where": where, "outFields": "*", "returnGeometry": "true", "outSR": "4326",
             "f": "geojson", "resultOffset": offset, "resultRecordCount": 1000,
         })
-        if "error" in gj:
+        if gj is None or "error" in gj:
             raise RuntimeError(gj["error"])
         batch = gj.get("features", [])
         features.extend(batch)
