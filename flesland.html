@@ -52,7 +52,7 @@
   .col { background: var(--deck); border-radius: 20px; padding: 20px 22px 8px; border-top: 8px solid var(--rail); }
   .col.tram { border-top-color: var(--tram); }
   .col.bus { border-top-color: var(--bus); }
-  .mode { font-size: 18px; letter-spacing: .08em; text-transform: uppercase; color: var(--mist); }
+  .mode { font-size: 22px; letter-spacing: .08em; text-transform: uppercase; color: var(--mist); }
   .head { display: flex; align-items: center; gap: 14px; margin-top: 6px; }
   .badge { display: inline-flex; align-items: center; justify-content: center; min-width: 64px; height: 64px; padding: 0 16px; border-radius: 16px; font-size: 40px; font-weight: 700; color: #0e1620; }
   .col.tram .badge { background: var(--tram); }
@@ -102,7 +102,7 @@
 <main>
   <header>
     <div>
-      <h1 data-i18n="title">Til Flesland</h1>
+      <h1>✈️ <span data-i18n="title">Til Flesland</span></h1>
       <p class="from" id="from"></p>
     </div>
     <div class="ctl">
@@ -124,7 +124,7 @@
 
   <div class="cols">
     <section class="col tram" id="colTram">
-      <div class="mode">Bybanen</div>
+      <div class="mode">🚊 Bybanen</div>
       <div class="head"><span class="badge" id="tramBadge">1</span><div class="stop" id="tramStop">…</div></div>
       <div class="facts">
         <div class="fact"><b id="tramWalk">–</b><span data-i18n="minWalk">min å gå</span> <span id="tramDist"></span></div>
@@ -138,7 +138,7 @@
       <ul class="deps" id="tramDeps"></ul>
     </section>
     <section class="col bus" id="colBus">
-      <div class="mode">Flybussen</div>
+      <div class="mode">🚌 Flybussen</div>
       <div class="head"><span class="badge" id="busBadge">FB</span><div class="stop" id="busStop">…</div></div>
       <div class="facts">
         <div class="fact"><b id="busWalk">–</b><span data-i18n="minWalk">min å gå</span> <span id="busDist"></span></div>
@@ -356,7 +356,7 @@
       const late = c.realtime && Math.abs(c.t - c.aimed) >= 60000 ? `<span class="rt">(${hhmm(c.aimed)})</span>` : "";
       const arr = s.rideMin ? `<span class="arr">→ ${hhmm(new Date(c.t.getTime() + s.rideMin * 60000))} ${t("arr")}</span>` : "";
       li.innerHTML = `<div class="t ${c.cancelled ? "cancel" : ""}">${hhmm(c.t)}${late}</div>
-        <span class="badge sm">${c.line || "?"}</span>
+        <span class="badge sm">${key === "tram" ? "🚊" : "🚌"} ${c.line || "?"}</span>
         <div class="to">${c.to}${arr}<small>${c.lineName}${rt}</small></div>
         <div class="m">${m}</div>`;
       ul.appendChild(li);
