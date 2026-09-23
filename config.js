@@ -78,6 +78,16 @@ window.KART_CONFIG = {
       paa: true,
       merknad: "Fra skiltstolpen og framover i kjøreretningen til neste reguleringsskilt (maks 180 m), forskjøvet til skiltets side. Utledet – verifiser i felt."
     },
+    parkeringsomrader: {
+      tittel: "NVDB – Parkeringsområder (type 43)",
+      snapshot: "data/nvdb_parkeringsomrader.geojson", paa: false,
+      merknad: "Registrerte P-områder fra Vegvesenet/kommunen med antall plasser der det finnes."
+    },
+    trafikklommer: {
+      tittel: "NVDB – Trafikklommer (type 47)",
+      snapshot: "data/nvdb_trafikklommer.geojson", paa: false,
+      merknad: "Lommer langs vegen. Bruksområde viser om det er parkering, buss eller varelevering."
+    },
     osm: {
       tittel: "OSM – boligsone/beboer",
       snapshot: "data/osm_parking.geojson",
