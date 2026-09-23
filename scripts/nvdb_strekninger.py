@@ -24,7 +24,7 @@ HEAD = {"Accept": "application/json", "X-Client": "bergen-boligsone-kart", "User
 MAKS_M = 180.0
 OFFSET_M = 3.0
 RE_BEBOER = re.compile(r"beboer|p-?\s*kort", re.I)
-RE_REGULERING = re.compile(r"^(372|376|552)")
+RE_REGULERING = re.compile(r"^(372|376|552|828)")
 
 _cache = {}
 
@@ -312,7 +312,15 @@ def main():
     beboer = [f for f in skilt if f["properties"].get("kategori") == "boligsone"
               and str(f["properties"].get("skiltnummer", "")).startswith("808")
               and RE_BEBOER.search(f["properties"].get("tekst") or "")]
-    print(f"{len(beboer)} beboerskilt", file=sys.stderr)
+    # 808 uten tekst på stolpe som også har 552: sannsynlig beboerskilt der kommunen ikke har registrert teksten
+    mor_552 = {(f["properties"].get("mor") or [None])[0] for f in skilt if str(f["properties"].get("skiltnummer", "")).startswith("552")}
+    ukjent = [f for f in skilt if str(f["properties"].get("skiltnummer", "")).startswith("808")
+              and not (f["properties"].get("tekst") or "").strip()
+              and (f["properties"].get("mor") or [None])[0] in mor_552]
+    for f in ukjent:
+        f["properties"]["_ukjent"] = True
+    beboer += ukjent
+    print(f"{len(beboer) - len(ukjent)} beboerskilt + {len(ukjent)} tekstløse underskilt på P-stolper", file=sys.stderr)
     feats = []
     for f in beboer:
         p = f["properties"]
@@ -327,14 +335,36 @@ def main():
             if not lenker:
                 print("  mangler geometri", sp["vid"], file=sys.stderr); continue
             egne = plater(sp["plater"]) if sp["plater"] else {}
-            vender = next((v["vender"] for v in egne.values() if v.get("vender")), None) or (p.get("egenskaper") or {}).get("Ansiktsside, rettet mot") or ""
-            fram = "mot metrering" not in vender.lower()  # skiltet vender mot trafikk MED metrering -> gjelder framover (økende pos)
+            # Kjøreretning skiltet vender mot: "Trafikk i/med metreringsretning" -> bilene kjører mot økende pos
+            def kjorer_fram(v):
+                v = (v or "").lower()
+                if "mot metrering" in v: return False
+                if "metrering" in v: return True
+                return None
+            pil = next((v for v in egne.values() if str(v.get("nr", "")).startswith("828")), None)
+            vendere = [kjorer_fram(v.get("vender")) for v in ([pil] if pil else []) + list(egne.values())]
+            kj_fram = next((x for x in vendere if x is not None), True)
+            pilnr = str(pil["nr"])[:5] if pil else ""
             typer_cache = {}
-            linje, stopp_grunn = folg(sp["vid"], sp["pos"], fram, sp["side"], sp["id"], typer_cache)
-            if linjelengde(linje) < 10:
-                alt, alt_grunn = folg(sp["vid"], sp["pos"], not fram, sp["side"], sp["id"], typer_cache)
-                if linjelengde(alt) > linjelengde(linje):
-                    linje, stopp_grunn, fram = alt, alt_grunn + " (snudd retning)", not fram
+            if pilnr.startswith("828.1"):      # gjelder i kjøreretningen -> framover
+                fram = kj_fram; utstrekning = "828.1 pil i kjøreretningen"
+            elif pilnr.startswith("828.2"):    # gjelder mot kjøreretningen -> bakover
+                fram = not kj_fram; utstrekning = "828.2 pil mot kjøreretningen"
+            elif pilnr.startswith("828.3"):    # begge retninger
+                fram = None; utstrekning = "828.3 begge retninger"
+            else:
+                fram = kj_fram; utstrekning = "ingen 828-pil, antatt framover"
+            if fram is None:
+                a1, g1 = folg(sp["vid"], sp["pos"], True, sp["side"], sp["id"], typer_cache)
+                a2, g2 = folg(sp["vid"], sp["pos"], False, sp["side"], sp["id"], typer_cache)
+                linje = a2[::-1] + a1[1:] if a2 and a1 else (a1 or a2)
+                stopp_grunn = f"begge: {g2} / {g1}"; fram = True
+            else:
+                linje, stopp_grunn = folg(sp["vid"], sp["pos"], fram, sp["side"], sp["id"], typer_cache)
+                if linjelengde(linje) < 10 and not pil:
+                    alt, alt_grunn = folg(sp["vid"], sp["pos"], not fram, sp["side"], sp["id"], typer_cache)
+                    if linjelengde(alt) > linjelengde(linje):
+                        linje, stopp_grunn, fram = alt, alt_grunn + " (snudd retning)", not fram
             side = sp["side"]
             # linje ligger i kjøreretning; H/V er relativt til metrering -> snu ved kjøring mot metrering
             side_kj = side if fram else {"H": "V", "V": "H"}.get(side, side)
@@ -342,14 +372,16 @@ def main():
             if len(geom_pts) < 2:
                 continue
             soner = re.findall(r"sone\s*(\d+)", (p.get("tekst") or "").lower())
+            if p.get("_ukjent") and not soner:
+                soner = ["?"]
             feats.append({"type": "Feature", "properties": {
                 "gate": GATENAVN.get(str(sp["vid"])) or p.get("vegsystem"), "vegref": p.get("vegsystem"), "sone": "+".join(dict.fromkeys(soner)) or "?", "tekst": p.get("tekst"),
                 "skilt_id": p.get("nvdb_id"), "skiltpunkt_id": sp["id"], "veglenkesekvens": sp["vid"],
                 "side": {"H": "høyre (metreringsretning)", "V": "venstre (metreringsretning)"}.get(side, side),
                 "retning": "med metrering" if fram else "mot metrering",
-                "lengde_m": round(linjelengde(linje)), "stopp": stopp_grunn,
+                "lengde_m": round(linjelengde(linje)), "stopp": stopp_grunn, "utstrekning": utstrekning,
                 "plater_paa_stolpen": [f"{v['nr']}: {v['tekst'] or ''}".strip(": ") for v in egne.values()],
-                "status": "utledet"
+                "status": "utledet – tekst ikke registrert i NVDB" if p.get("_ukjent") else "utledet"
             }, "geometry": {"type": "LineString", "coordinates": [[round(x, 7), round(y, 7)] for x, y in geom_pts]}})
             print(f"  ok {p.get('tekst')} @ {p.get('vegsystem')}: {round(linjelengde(linje))} m ({stopp_grunn})", file=sys.stderr)
         except Exception as e:
