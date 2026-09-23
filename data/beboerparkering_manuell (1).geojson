@@ -1,0 +1,35 @@
+{
+  "type": "FeatureCollection",
+  "_kommentar": "Manuelt kuratert lag. Én feature per skiltet strekning. Geometri som LineString langs fortauskanten på riktig side. status: 'verifisert' (skiltplan/vedtak/felt), 'indikert' (ParkMe/INRIX el.l., ikke bekreftet), 'usikker'. Koordinater [lon, lat].",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "gate": "Markeveien",
+        "strekning": "Ved Torgallmenningen / Christian Michelsens gate, utgang KlosterGarasjen",
+        "side": "ukjent – må sjekkes",
+        "sone": "1",
+        "type": "boligsone",
+        "antall_plasser": null,
+        "vilkar": "Gjelder beboere med P-kort til sone 1. Hele døgnet, alle dager.",
+        "status": "usikker",
+        "kilde": "Bymiljøetaten skiltplan 2025",
+        "geometri_noyaktighet": "FEIL PLASSERT – tegn på nytt med tegnemodus",
+        "sist_sjekket": "2026-09-23"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            5.32135,
+            60.39215
+          ],
+          [
+            5.32255,
+            60.39255
+          ]
+        ]
+      }
+    }
+  ]
+}
