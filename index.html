@@ -35,6 +35,20 @@
     </section>
 
     <section class="blokk">
+      <h2>Legg inn strekning</h2>
+      <p class="fotnote">Klikk langs fortauskanten på riktig side. Dobbeltklikk for å avslutte. Kopier GeoJSON inn i <code>data/beboerparkering_manuell.geojson</code>.</p>
+      <div class="tegnfelt">
+        <input id="tegnGate" placeholder="Gate">
+        <select id="tegnSone"><option>1</option><option>2</option><option>3</option><option>usikker</option></select>
+        <select id="tegnSide"><option>nord</option><option>sør</option><option>øst</option><option>vest</option><option>ukjent</option></select>
+        <input id="tegnAntall" type="number" min="0" placeholder="Antall">
+        <select id="tegnStatus"><option>verifisert</option><option>indikert</option><option>usikker</option></select>
+      </div>
+      <button id="tegnKnapp" type="button">Tegn strekning</button>
+      <textarea id="tegnUt" rows="8" hidden spellcheck="false"></textarea>
+    </section>
+
+    <section class="blokk">
       <h2>Status</h2>
       <ul id="status" class="status"></ul>
       <p class="fotnote">Klikk på et objekt for detaljer. Data: Bergen kommune / Bymiljøetaten (ArcGIS REST) + manuelt kuratert lag. Sonepolygoner er søknadsområde, ikke parkeringsstrekninger. Antall plasser er kommunens registrerte tall der det finnes.</p>
