@@ -407,6 +407,7 @@
 
   // 5) Manuelt verifisert beboerparkering – hvit kant + farget strek
   async function lastManuell() {
+    if (!C.lag.manuell) return;
     const gj = await hentLag("manuell") || { type: "FeatureCollection", features: [] };
     const kant = L.geoJSON(gj, { style: () => ({ color: "#ffffff", weight: 11, opacity: 0.9 }), interactive: false });
     const strek = L.geoJSON(gj, {
