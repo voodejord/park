@@ -77,7 +77,7 @@ window.KART_CONFIG = {
   // Klassifisering av kommunens Type-/betingelsesfelt til kartkategorier.
   // Nøkkel = kategori, verdi = regex som matches mot Type + PBetingelser (case-insensitive).
   klassifisering: [
-    { kat: "ekspress",  re: /ekspress|maks(imalt)?\s*[12]\s*t(ime)?|korttid/i },
+    { kat: "ekspress",  re: /ekspress|maks\.?\s*1\s*time|korttid/i },
     { kat: "boligsone", re: /boligsone|beboer|sonekort/i },
     { kat: "avgift",    re: /552|avgift|automat|parkometer|betal|kr/i },
   ],
