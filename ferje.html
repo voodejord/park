@@ -223,21 +223,24 @@
     }));
   }
 
-  async function carFerryQuayIds(ids) {
+  // kaier som faktisk har avganger de neste 6 timene (og bilferje hvis filteret er på)
+  async function quaysWithDepartures(ids, carsOnly) {
     const d = await gql(`query($ids:[String]!){
       stopPlaces(ids:$ids){ id
-        estimatedCalls(numberOfDepartures:8, timeRange:86400){
-          serviceJourney{ transportSubmode } } } }`, { ids });
-    return new Set((d.stopPlaces || [])
-      .filter(s => s?.estimatedCalls?.some(c => CAR_FERRY.has(c.serviceJourney?.transportSubmode)))
-      .map(s => s.id));
+        estimatedCalls(numberOfDepartures:10, timeRange:21600){
+          expectedDepartureTime cancellation serviceJourney{ transportSubmode } } } }`, { ids });
+    const info = {};
+    for (const sp of d.stopPlaces || []) {
+      if (!sp) continue;
+      const calls = sp.estimatedCalls.filter(c => !c.cancellation && (!carsOnly || CAR_FERRY.has(c.serviceJourney?.transportSubmode)));
+      if (calls.length) info[sp.id] = { next: new Date(calls[0].expectedDepartureTime), n: calls.length };
+    }
+    return info;
   }
 
   async function applyQuayFilter() {
-    if (state.carsOnly) {
-      const ok = await carFerryQuayIds(state.allQuays.map(q => q.id));
-      state.quays = state.allQuays.filter(q => ok.has(q.id));
-    } else state.quays = state.allQuays;
+    const info = await quaysWithDepartures(state.allQuays.map(q => q.id), state.carsOnly);
+    state.quays = state.allQuays.filter(q => info[q.id]).map(q => ({ ...q, next: info[q.id].next }));
     renderQuays();
   }
 
@@ -261,6 +264,7 @@
   // ---------- Rendering ----------
   const hhmm = d => d.toLocaleTimeString("nb-NO", { hour: "2-digit", minute: "2-digit" });
   const mins = ms => Math.round(ms / 60000);
+  const dur = m => { m = Math.abs(Math.round(m)); return m < 60 ? `${m} min` : `${Math.floor(m / 60)} t ${String(m % 60).padStart(2, "0")} min`; };
 
   function render() {
     if (!state.quay) return;
@@ -269,8 +273,9 @@
 
     const now = Date.now();
     const arrive = state.driveSec == null ? null : now + state.driveSec * 1000;
-    $("etaNum").textContent = state.driveSec == null ? "–" : Math.round(state.driveSec / 60);
-    $("etaLbl").textContent = arrive ? `min kjøretid · på kai ${hhmm(new Date(arrive))}` : "min kjøretid";
+    const dm = state.driveSec == null ? null : Math.round(state.driveSec / 60);
+    $("etaNum").textContent = dm == null ? "–" : dm < 60 ? dm : `${Math.floor(dm / 60)}:${String(dm % 60).padStart(2, "0")}`;
+    $("etaLbl").textContent = dm == null ? "min kjøretid" : (dm < 60 ? "min kjøretid" : "t kjøretid") + (arrive ? ` · på kai ${hhmm(new Date(arrive))}` : "");
 
     let calls = state.calls.filter(c => c.t.getTime() > now - 60000);
     if (state.carsOnly) calls = calls.filter(c => CAR_FERRY.has(c.submode));
@@ -282,12 +287,12 @@
       const li = document.createElement("li");
       let status = "", mtext = "";
       if (c.cancelled) { status = "miss"; mtext = "innstilt"; }
-      else if (arrive == null) { mtext = `om ${mins(c.t - now)} min`; }
+      else if (arrive == null) { mtext = `om ${dur(mins(c.t - now))}`; }
       else {
         const margin = mins(c.t - (arrive + state.bufferMin * 60000));
-        if (margin >= 5) { status = "go"; mtext = `rekker · ${margin} min til gode`; }
+        if (margin >= 5) { status = "go"; mtext = `rekker · ${dur(margin)} til gode`; }
         else if (margin >= 0) { status = "wait"; mtext = `knapt · ${margin} min`; }
-        else { status = "miss"; mtext = `rekker ikke · ${-margin} min for sein`; }
+        else { status = "miss"; mtext = `rekker ikke · ${dur(margin)} for sein`; }
         if (!first && status !== "miss") first = { ...c, margin };
       }
       li.className = `dep ${status}` + (first && first.t === c.t && !li.dataset.marked ? " first" : "");
@@ -303,13 +308,13 @@
     list.querySelectorAll(".first").forEach((el, i) => { if (i > 0) el.classList.remove("first"); });
 
     const v = $("verdict");
-    if (!calls.length) { v.className = "verdict"; v.textContent = "Ingen avganger neste 6 timer fra denne kaia."; }
+    if (!calls.length) { v.className = "verdict"; v.textContent = "Ingen avganger neste 6 timer fra denne kaia – trykk «Bytt kai»."; }
     else if (arrive == null) { v.className = "verdict"; v.textContent = "Har avganger, mangler kjøretid."; }
     else if (!first) { v.className = "verdict miss"; v.innerHTML = `Rekker ingen av de neste ${calls.length} avgangene med ${state.bufferMin} min margin.`; }
     else {
       const wait = mins(first.t - arrive);
       v.className = `verdict ${first.margin >= 5 ? "go" : "wait"}`;
-      v.innerHTML = `Neste du rekker: <b>${hhmm(first.t)}</b> mot ${first.to} · venter ${wait} min på kai`;
+      v.innerHTML = `Neste du rekker: <b>${hhmm(first.t)}</b> mot ${first.to} · venter ${dur(wait)} på kai`;
     }
     $("msg").textContent = "";
     $("foot").textContent = `Oppdatert ${hhmm(new Date())}. Avganger: Entur. Kjøretid: ${state.driveSource || "–"}. Margin = tid du vil ha på kai før avgang.`;
@@ -321,7 +326,7 @@
     for (const q of state.quays) {
       const li = document.createElement("li");
       const b = document.createElement("button");
-      b.innerHTML = `${q.name}<span>${(q.distance / 1000).toFixed(1)} km</span>`;
+      b.innerHTML = `${q.name}<span>${(q.distance / 1000).toFixed(1)} km${q.next ? " · neste " + hhmm(q.next) : ""}</span>`;
       b.onclick = () => { selectQuay(q); ul.classList.add("hidden"); $("btnQuays").setAttribute("aria-expanded", "false"); };
       li.appendChild(b); ul.appendChild(li);
     }
@@ -355,7 +360,7 @@
       try {
         state.allQuays = await nearestQuays(lat, lon);
         await applyQuayFilter();
-        if (!state.quays.length) { $("quayName").textContent = state.carsOnly ? "Ingen bilferjekai innen 150 km" : "Ingen ferjekai innen 150 km"; return; }
+        if (!state.quays.length) { $("quayName").textContent = state.carsOnly ? "Ingen bilferje-avganger innen 150 km neste 6 t" : "Ingen ferjeavganger innen 150 km neste 6 t"; $("quaySub").textContent = ""; return; }
         const saved = state.quays.find(q => q.id === localStorageGet("quay", ""));
         await selectQuay(saved || state.quays[0]);
       } catch (e) { showErr(e); }
