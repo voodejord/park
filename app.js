@@ -22,6 +22,20 @@
   const panel = document.getElementById("panel");
   document.getElementById("togglePanel").onclick = () => panel.classList.toggle("open");
 
+  // ---------- Navigasjonslenker i alle popups ----------
+  map.on("popupopen", e => {
+    const ll = e.popup.getLatLng(); if (!ll) return;
+    const el = e.popup.getElement()?.querySelector(".leaflet-popup-content"); if (!el || el.querySelector(".nav")) return;
+    const lat = ll.lat.toFixed(6), lng = ll.lng.toFixed(6);
+    const d = document.createElement("div"); d.className = "nav";
+    d.innerHTML = `<a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving" target="_blank" rel="noopener">Google Maps</a>` +
+      `<a href="https://maps.apple.com/?daddr=${lat},${lng}&dirflg=d" target="_blank" rel="noopener">Apple Kart</a>` +
+      `<a href="geo:${lat},${lng}?q=${lat},${lng}">Kart-app</a>` +
+      `<button type="button" data-c="${lat},${lng}">Kopier</button>`;
+    d.querySelector("button").onclick = ev => { navigator.clipboard?.writeText(ev.target.dataset.c); ev.target.textContent = "Kopiert"; };
+    el.appendChild(d);
+  });
+
   // ---------- Hjelpere ----------
   const statusEl = document.getElementById("status");
   function setStatus(id, tekst, klasse) {
@@ -341,6 +355,21 @@
     if (li) li.querySelector(".merknad").textContent = `${n.beboer} beboerskilt (firkant m/ sonetall), ${n.sonegrense} soneinnkjøringsskilt (ramme). Skiltet står der reguleringen begynner.`;
   }
 
+  // 4e) NVDB flate-/linjelag (parkeringsområder, trafikklommer)
+  async function lastNvdbFlate(id, farge) {
+    const gj = await hentLag(id) || { type: "FeatureCollection", features: [] };
+    const layer = L.geoJSON(gj, {
+      style: f => ({ color: farge, weight: 2, fillColor: farge, fillOpacity: 0.3 }),
+      pointToLayer: (f, ll) => L.circleMarker(ll, { radius: 6, color: "#fff", weight: 1, fillColor: farge, fillOpacity: .9 }),
+      onEachFeature: (f, l) => {
+        const p = f.properties;
+        const rader = Object.entries(p).filter(([k, v]) => !/^(nvdb_id|type|veglenkesekvenser)$/.test(k) && v !== null && typeof v !== "object").slice(0, 14);
+        l.bindPopup(popupTabell(C.lag[id].tittel.replace(/^NVDB – /, ""), [["Ligger i", "sone " + soneFor(f.geometry)], ...rader, ["NVDB-id", p.nvdb_id]]));
+      }
+    });
+    leggTilLagValg(id, layer); registrerFilter(layer);
+  }
+
   // 4d) Utledede strekninger fra NVDB-skilt
   async function lastStrekninger() {
     const gj = await hentLag("strekninger") || { type: "FeatureCollection", features: [] };
@@ -350,7 +379,7 @@
       onEachFeature: (f, l) => {
         const p = f.properties;
         l.bindPopup(popupTabell(`Beboerparkering sone ${p.sone} (utledet)`, [
-          ["Skilttekst", p.tekst], ["Vegreferanse", p.gate], ["Lengde", p.lengde_m + " m"], ["Slutt", p.stopp],
+          ["Skilttekst", p.tekst], ["Gate", p.gate], ["Vegreferanse", p.vegref], ["Lengde", p.lengde_m + " m"], ["Slutt", p.stopp],
           ["Side", p.side], ["Retning", p.retning], ["På stolpen", (p.plater_paa_stolpen || []).join(" · ")],
           ["Ligger i polygon", "sone " + soneFor(f.geometry)], ["Skiltpunkt", p.skiltpunkt_id]
         ], `<span class="status-chip indikert">utledet</span>`));
@@ -454,7 +483,8 @@
   // ---------- Start ----------
   lastSonegrenser().then(() => Promise.all([lastManuell(), lastParkeringskart(),
     lastPunktlag("lading", F.lade, "Ladeplass"), lastPunktlag("hc", F.hc, "HC-plass"),
-    lastForbud(), lastAutomater(), lastOsm(), lastNvdb(), lastStrekninger()])).then(() => {
+    lastForbud(), lastAutomater(), lastOsm(), lastNvdb(), lastStrekninger(),
+    lastNvdbFlate("parkeringsomrader", "#e76f51"), lastNvdbFlate("trafikklommer", "#8ab17d")])).then(() => {
     document.getElementById("kunSone123").onchange = bruk123Filter;
     document.getElementById("fokus").onchange = e => fokus(e.target.checked);
     bruk123Filter();
