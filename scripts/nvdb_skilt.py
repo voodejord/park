@@ -6,17 +6,17 @@ Objekttype 96 = Skiltplate (skiltnummer + tekst + geometri). Filtreres til skilt
 gjelder parkering/boligsone: hovedskilt 552 (parkering), 372/376 (forbud) og underskilt
 806/807/808 med tekst som nevner sone/beboer/P-kort.
 
-API: https://nvdbapiles-v3.atlas.vegvesen.no  (åpent, ingen nøkkel)
+API v4: https://nvdbapiles.atlas.vegvesen.no/vegobjekter/api/v4  (åpent, ingen nøkkel)
 Kun standardbibliotek.
 """
 import json, re, sys, urllib.parse, urllib.request
 from pathlib import Path
 
-API = "https://nvdbapiles-v3.atlas.vegvesen.no"
+API = "https://nvdbapiles.atlas.vegvesen.no/vegobjekter/api/v4"
 UT = Path(__file__).resolve().parent.parent / "data" / "nvdb_skilt.geojson"
 # Bergen sentrum, WGS84: minlon,minlat,maxlon,maxlat
 BBOX = "5.295,60.378,5.350,60.408"
-HEAD = {"Accept": "application/vnd.vegvesen.nvdb-v3-rev1+json", "X-Client": "bergen-boligsone-kart",
+HEAD = {"Accept": "application/json", "X-Client": "bergen-boligsone-kart",
         "User-Agent": "bergen-boligsone-kart/1.0"}
 
 RE_TREFF = re.compile(r"sone\s*\d|boligsone|beboer|p-?kort|sonekort", re.I)
@@ -25,15 +25,49 @@ SKILT_RELEVANT = re.compile(r"\b(552|372|376|806|807|808)\b")
 
 def get(url):
     req = urllib.request.Request(url, headers=HEAD)
-    with urllib.request.urlopen(req, timeout=120) as r:
-        return json.load(r)
+    try:
+        with urllib.request.urlopen(req, timeout=120) as r:
+            return json.load(r)
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", "replace")[:500]
+        raise RuntimeError(f"HTTP {e.code} for {url}\n{body}")
+
+
+MINLON, MINLAT, MAXLON, MAXLAT = (float(v) for v in BBOX.split(","))
+
+
+def i_bbox(geom):
+    c = geom["coordinates"] if geom["type"] == "Point" else geom["coordinates"][0]
+    return MINLON <= c[0] <= MAXLON and MINLAT <= c[1] <= MAXLAT
 
 
 def hent(objekttype):
-    url = f"{API}/vegobjekter/{objekttype}?" + urllib.parse.urlencode({
-        "kommune": 4601, "kartutsnitt": BBOX, "srid": 4326, "antall": 1000,
-        "inkluder": "egenskaper,geometri,lokasjon,relasjoner"})
-    alle = []
+    felles = {"kommune": 4601, "srid": 4326, "antall": 1000, "sortering": "false", "inkluderAntall": "false",
+              "inkluder": "egenskaper,geometri,lokasjon,relasjoner"}
+    # Forsøk 1: kartutsnitt (lon,lat-rekkefølge i 4326). Forsøk 2: hele kommunen, filtrer lokalt.
+    forsok = [dict(felles, kartutsnitt=BBOX), dict(felles)]
+    for params in forsok:
+        url = f"{API}/vegobjekter/{objekttype}?" + urllib.parse.urlencode(params)
+        try:
+            d = get(url)
+        except RuntimeError as e:
+            print("  feilet:", str(e).splitlines()[0], file=sys.stderr); continue
+        alle = d.get("objekter", [])
+        nxt = d.get("metadata", {}).get("neste", {}).get("href")
+        print(f"  type {objekttype}: {len(alle)} (kartutsnitt={'kartutsnitt' in params})", file=sys.stderr)
+        while nxt and nxt != url and alle and len(alle) < 300000:
+            url = nxt
+            d = get(url)
+            obj = d.get("objekter", [])
+            if not obj: break
+            alle.extend(obj)
+            nxt = d.get("metadata", {}).get("neste", {}).get("href")
+            print(f"  type {objekttype}: {len(alle)}", file=sys.stderr)
+        return alle
+    raise RuntimeError("Begge forsøk mot NVDB feilet")
+
+
+def _unused():
     while True:
         d = get(url)
         obj = d.get("objekter", [])
@@ -80,7 +114,7 @@ def main():
         if not relevant:
             continue
         geom = wkt_til_geom((o.get("geometri") or {}).get("wkt"))
-        if not geom:
+        if not geom or not i_bbox(geom):
             continue
         kat = "boligsone" if RE_TREFF.search(tekst) else ("forbud" if re.search(r"\b37[26]\b", skiltnr) else "parkering")
         feats.append({"type": "Feature", "properties": {
