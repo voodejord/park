@@ -389,7 +389,7 @@
       onEachFeature: (f, l) => {
         const p = f.properties;
         l.bindPopup(popupTabell(p.sone === "?" ? "Mulig beboerparkering – underskilt uten tekst (utledet)" : `Beboerparkering sone ${p.sone} (utledet)`, [
-          ["Skilttekst", p.tekst], ["Gate", p.gate], ["Vegreferanse", p.vegref], ["Lengde", p.lengde_m + " m"], ["Slutt", p.stopp],
+          ["Skilttekst", p.tekst], ["Gate", p.gate], ["Vegreferanse", p.vegref], ["Lengde", p.lengde_m + " m"], ["Utstrekning", p.utstrekning], ["Slutt", p.stopp],
           ["Side", p.side], ["Retning", p.retning], ["På stolpen", (p.plater_paa_stolpen || []).join(" · ")],
           ["Ligger i polygon", "sone " + soneFor(f.geometry)], ["Skiltpunkt", p.skiltpunkt_id]
         ], `<span class="status-chip indikert">utledet</span>`));
