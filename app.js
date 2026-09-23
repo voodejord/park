@@ -200,6 +200,25 @@
     leggTilLagValg("automater", layer);
   }
 
+  // 4b) OSM gateparkering
+  async function lastOsm() {
+    const gj = await hentLag("osm");
+    const farge = k => ({ beboer: F.boligsone, ekspress: F.ekspress, avgift: F.avgift, forbud: F.forbud }[k] || F.annet);
+    const layer = L.geoJSON(gj || { type: "FeatureCollection", features: [] }, {
+      style: f => ({ color: farge(f.properties.kategori), weight: 4, opacity: 0.7, fillOpacity: 0.25 }),
+      pointToLayer: (f, ll) => L.circleMarker(ll, { radius: 4, color: farge(f.properties.kategori), fillOpacity: .8 }),
+      onEachFeature: (f, l) => {
+        const p = f.properties;
+        const park = p.parking ? Object.entries(p.parking).map(([k, v]) => `${k}=${v}`).join(" · ") : null;
+        l.bindPopup(popupTabell(p.name || "OSM " + p.osm_type + " " + p.osm_id, [
+          ["Kategori", p.kategori], ["Parking-tags", park], ["Access", p.access], ["Fee", p.fee], ["Maxstay", p.maxstay],
+          ["Kapasitet", p.capacity], ["OSM", `${p.osm_type}/${p.osm_id}`]
+        ]));
+      }
+    });
+    leggTilLagValg("osm", layer);
+  }
+
   // 5) Manuelt verifisert beboerparkering
   async function lastManuell() {
     const gj = await hentLag("manuell");
@@ -222,6 +241,46 @@
     leggTilLagValg("manuell", layer);
   }
 
+  // ---------- Tegnemodus: klikk punkter, få GeoJSON ----------
+  function tegnemodus() {
+    const knapp = document.getElementById("tegnKnapp"), ut = document.getElementById("tegnUt");
+    let aktiv = false, pts = [], linje = null, prikker = [];
+    function nullstill() { pts = []; if (linje) map.removeLayer(linje); linje = null; prikker.forEach(p => map.removeLayer(p)); prikker = []; }
+    function oppdater() {
+      if (linje) map.removeLayer(linje);
+      if (pts.length > 1) linje = L.polyline(pts, { color: F.boligsone, weight: 6, dashArray: "4 6" }).addTo(map);
+    }
+    function ferdig() {
+      if (pts.length < 2) { nullstill(); return; }
+      const f = {
+        type: "Feature",
+        properties: {
+          gate: document.getElementById("tegnGate").value || "", strekning: "", side: document.getElementById("tegnSide").value,
+          sone: document.getElementById("tegnSone").value, type: "boligsone",
+          antall_plasser: Number(document.getElementById("tegnAntall").value) || null, vilkar: "",
+          status: document.getElementById("tegnStatus").value, kilde: "Tegnet i kart", geometri_noyaktighet: "kart",
+          sist_sjekket: new Date().toISOString().slice(0, 10)
+        },
+        geometry: { type: "LineString", coordinates: pts.map(p => [+p.lng.toFixed(6), +p.lat.toFixed(6)]) }
+      };
+      ut.value = JSON.stringify(f, null, 2) + ",";
+      ut.hidden = false; ut.select();
+    }
+    knapp.onclick = () => {
+      aktiv = !aktiv;
+      knapp.textContent = aktiv ? "Avslutt (dobbeltklikk = ferdig)" : "Tegn strekning";
+      map.getContainer().style.cursor = aktiv ? "crosshair" : "";
+      if (aktiv) { nullstill(); ut.hidden = true; map.doubleClickZoom.disable(); } else { ferdig(); map.doubleClickZoom.enable(); }
+    };
+    map.on("click", e => {
+      if (!aktiv) return;
+      pts.push(e.latlng);
+      prikker.push(L.circleMarker(e.latlng, { radius: 4, color: "#fff", fillColor: F.boligsone, fillOpacity: 1 }).addTo(map));
+      oppdater();
+    });
+    map.on("dblclick", () => { if (aktiv) knapp.click(); });
+  }
+
   // ---------- Tegnforklaring ----------
   const legend = document.getElementById("legend");
   [
@@ -239,5 +298,6 @@
   // ---------- Start ----------
   Promise.all([lastSonegrenser(), lastManuell(), lastParkeringskart(),
     lastPunktlag("lading", F.lade, "Ladeplass"), lastPunktlag("hc", F.hc, "HC-plass"),
-    lastForbud(), lastAutomater()]);
+    lastForbud(), lastAutomater(), lastOsm()]);
+  tegnemodus();
 })();
