@@ -193,7 +193,7 @@
 
   async function nearestQuays(lat, lon) {
     const d = await gql(`query($lat:Float!,$lon:Float!){
-      nearest(latitude:$lat, longitude:$lon, maximumDistance:80000, maximumResults:12,
+      nearest(latitude:$lat, longitude:$lon, maximumDistance:150000, maximumResults:12,
               filterByPlaceTypes:[stopPlace], filterByModes:[water], multiModalMode:child){
         edges{ node{ distance place{ ... on StopPlace{ id name latitude longitude } } } }
       }}`, { lat, lon });
