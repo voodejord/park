@@ -70,7 +70,7 @@ window.KART_CONFIG = {
       tittel: "OpenStreetMap – gateparkering",
       snapshot: "data/osm_parking.geojson",
       paa: true,
-      merknad: "Frivillig kartlagt (Overpass). Lilla = beboer/permit, rød = korttid, grå = avgift. Dekning varierer – verifiser før bruk."
+      merknad: "Frivillig kartlagt (Overpass). Lilla = permit/beboer (kun 4 obj i sentrum), svakt grått = privat gårdsplass/anlegg. Dekning tynn – verifiser."
     },
     manuell: {
       tittel: "Beboerparkering – manuelt verifisert",
