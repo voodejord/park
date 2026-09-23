@@ -66,11 +66,17 @@ window.KART_CONFIG = {
       snapshot: "data/automater.geojson",
       paa: false
     },
+    nvdb: {
+      tittel: "NVDB – parkeringsskilt (Vegvesenet)",
+      snapshot: "data/nvdb_skilt.geojson",
+      paa: true,
+      merknad: "Skiltplater fra Nasjonal vegdatabank. Lilla = tekst nevner sone/beboer/P-kort. Skiltet står ved starten av strekningen."
+    },
     osm: {
-      tittel: "OpenStreetMap – gateparkering",
+      tittel: "OSM – boligsone/beboer",
       snapshot: "data/osm_parking.geojson",
       paa: true,
-      merknad: "Frivillig kartlagt (Overpass). Lilla = permit/beboer (kun 4 obj i sentrum), svakt grått = privat gårdsplass/anlegg. Dekning tynn – verifiser."
+      merknad: "Frivillig kartlagt. Kun objekter tagget permit/Soneparkering/P-kort (8 stk) og beboeranlegg. Dekning tynn."
     },
     manuell: {
       tittel: "Beboerparkering – manuelt verifisert",
