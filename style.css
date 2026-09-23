@@ -1,0 +1,73 @@
+:root {
+  --bg: #f6f4ee;
+  --panel: #ffffff;
+  --ink: #1f2a33;
+  --ink-2: #5b6772;
+  --line: #d9d4c7;
+  --accent: #7b2cbf;
+  --panel-w: 340px;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14181c; --panel: #1c2228; --ink: #e8e6df; --ink-2: #a3aab2; --line: #2e3740;
+  }
+}
+*, *::before, *::after { box-sizing: inherit; }
+html, body { height: 100%; margin: 0; }
+body {
+  background: var(--bg); color: var(--ink);
+  font: 14px/1.45 "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+}
+#app { display: grid; grid-template-columns: var(--panel-w) 1fr; height: 100%; }
+#panel {
+  background: var(--panel); border-right: 1px solid var(--line);
+  overflow-y: auto; padding: 20px 18px 28px;
+}
+#panel header h1 {
+  margin: 0 0 8px; font-size: 22px; line-height: 1.15; font-weight: 600; letter-spacing: -0.01em;
+}
+#panel .sub { margin: 0; color: var(--ink-2); font-size: 13px; }
+.blokk { margin-top: 22px; padding-top: 14px; border-top: 1px solid var(--line); }
+.blokk h2 { margin: 0 0 8px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.blokk ul { list-style: none; margin: 0; padding: 0; }
+.blokk label { display: flex; gap: 8px; align-items: center; padding: 3px 0; cursor: pointer; }
+.blokk label.sok { margin-top: 8px; }
+.blokk input[type="search"] {
+  width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px;
+  background: var(--bg); color: var(--ink); font: inherit;
+}
+#lagliste li { padding: 4px 0; }
+#lagliste .merknad { display: block; color: var(--ink-2); font-size: 12px; margin-left: 24px; }
+.legend li { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
+.legend .sw { width: 28px; height: 6px; border-radius: 3px; flex: none; }
+.legend .sw.dot { width: 12px; height: 12px; border-radius: 50%; margin: 0 8px; }
+.legend .sw.fill { height: 14px; opacity: .45; }
+.legend .sw.hatch { height: 14px; background: repeating-linear-gradient(45deg, #b00020 0 3px, transparent 3px 7px); }
+.status li { display: flex; justify-content: space-between; gap: 8px; padding: 2px 0; font-size: 13px; }
+.status .k { color: var(--ink-2); }
+.status .ok { color: #2a9d8f; } .status .feil { color: #d62828; } .status .venter { color: var(--ink-2); }
+.fotnote { color: var(--ink-2); font-size: 12px; margin: 12px 0 0; }
+#kart { height: 100%; }
+#togglePanel {
+  display: none; position: fixed; left: 10px; top: calc(10px + env(safe-area-inset-top, 0px)); z-index: 1000;
+  width: 40px; height: 40px; border: 1px solid var(--line); border-radius: 6px;
+  background: var(--panel); color: var(--ink); font-size: 18px; cursor: pointer;
+}
+.leaflet-popup-content { font: 13px/1.4 inherit; }
+.leaflet-popup-content table { border-collapse: collapse; }
+.leaflet-popup-content td { padding: 1px 6px 1px 0; vertical-align: top; }
+.leaflet-popup-content td:first-child { color: var(--ink-2); white-space: nowrap; }
+.popup-tittel { font-weight: 600; margin-bottom: 4px; }
+.status-chip { display: inline-block; padding: 0 6px; border-radius: 3px; font-size: 11px; color: #fff; }
+.status-chip.verifisert { background: #2a9d8f; } .status-chip.indikert { background: #f4a261; } .status-chip.usikker { background: #6c757d; }
+.leaflet-container { background: var(--bg); }
+@media (max-width: 760px) {
+  #app { grid-template-columns: 1fr; }
+  #panel { position: fixed; inset: 0 auto 0 0; width: min(88vw, var(--panel-w)); z-index: 999; transform: translateX(-100%); transition: transform .2s; }
+  #panel.open { transform: none; }
+  #togglePanel { display: block; }
+}
+@media (prefers-reduced-motion: reduce) { #panel { transition: none; } }

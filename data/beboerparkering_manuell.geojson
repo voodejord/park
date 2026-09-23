@@ -1,0 +1,57 @@
+{
+  "type": "FeatureCollection",
+  "_kommentar": "Manuelt kuratert lag. Én feature per skiltet strekning. Geometri som LineString langs fortauskanten på riktig side. status: 'verifisert' (skiltplan/vedtak/felt), 'indikert' (ParkMe/INRIX el.l., ikke bekreftet), 'usikker'. Koordinater [lon, lat].",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "gate": "Markeveien",
+        "strekning": "Ved Torgallmenningen / Christian Michelsens gate, utgang KlosterGarasjen",
+        "side": "ukjent – må sjekkes",
+        "sone": "1",
+        "type": "boligsone",
+        "antall_plasser": null,
+        "vilkar": "Gjelder beboere med P-kort til sone 1. Hele døgnet, alle dager.",
+        "status": "verifisert",
+        "kilde": "Bymiljøetaten skiltplan 2025",
+        "geometri_noyaktighet": "omtrentlig – tegn på nytt etter skiltplan",
+        "sist_sjekket": "2026-09-23"
+      },
+      "geometry": { "type": "LineString", "coordinates": [[5.32135, 60.39215], [5.32255, 60.39255]] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "gate": "Vestre Murallmenningen",
+        "strekning": "Bak allmenningen – grense sone 1 / sone 5",
+        "side": "ukjent",
+        "sone": "1 eller 5 – uavklart per delstrekning",
+        "type": "boligsone",
+        "antall_plasser": null,
+        "vilkar": "",
+        "status": "usikker",
+        "kilde": "Lokalkunnskap; ParkMe viser 'Residential Permit Only'",
+        "geometri_noyaktighet": "omtrentlig",
+        "sist_sjekket": "2026-09-23"
+      },
+      "geometry": { "type": "LineString", "coordinates": [[5.31895, 60.39430], [5.31990, 60.39480]] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "gate": "C. Sundts gate",
+        "strekning": "Deler av gaten",
+        "side": "ukjent",
+        "sone": "1?",
+        "type": "boligsone",
+        "antall_plasser": null,
+        "vilkar": "",
+        "status": "indikert",
+        "kilde": "ParkMe/INRIX 'Residential Permit Only'",
+        "geometri_noyaktighet": "omtrentlig",
+        "sist_sjekket": "2026-09-23"
+      },
+      "geometry": { "type": "LineString", "coordinates": [[5.31740, 60.39560], [5.31980, 60.39640]] }
+    }
+  ]
+}
