@@ -13,11 +13,11 @@
   });
   const graatone = L.tileLayer("https://cache.kartverket.no/v1/wmts/1.0.0/topograatone/default/webmercator/{z}/{y}/{x}.png", {
     maxZoom: 20, attribution: '&copy; <a href="https://www.kartverket.no/">Kartverket</a> · Parkeringsdata: Bergen kommune'
-  });
+  }).addTo(map);
   const osm = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · Parkeringsdata: Bergen kommune'
-  }).addTo(map);
-  L.control.layers({ "OpenStreetMap": osm, "Kartverket topo": kartverket, "Kartverket gråtone": graatone }, null, { position: "topright" }).addTo(map);
+  });
+  L.control.layers({ "Kartverket gråtone": graatone, "OpenStreetMap": osm, "Kartverket topo": kartverket }, null, { position: "topright" }).addTo(map);
 
   const panel = document.getElementById("panel");
   document.getElementById("togglePanel").onclick = () => panel.classList.toggle("open");
@@ -126,12 +126,33 @@
   function leggTilLagValg(id, layer) {
     const cfg = C.lag[id];
     const li = document.createElement("li");
-    li.innerHTML = `<label><input type="checkbox" ${cfg.paa ? "checked" : ""}> ${esc(cfg.tittel)}</label>` +
+    li.innerHTML = `<label><input type="checkbox" data-lag="${id}" ${cfg.paa ? "checked" : ""}> ${esc(cfg.tittel)}</label>` +
       (cfg.merknad ? `<span class="merknad">${esc(cfg.merknad)}</span>` : "");
     li.querySelector("input").onchange = e => e.target.checked ? layer.addTo(map) : map.removeLayer(layer);
     lagKontroll.appendChild(li);
     if (cfg.paa) layer.addTo(map);
     lag[id] = layer;
+  }
+
+  // Fokusmodus: bare beboerparkering
+  const FOKUS_LAG = new Set(["nvdb", "strekninger", "manuell", "sonegrenser"]);
+  let forFokus = null;
+  function fokus(paa) {
+    if (paa) {
+      forFokus = {};
+      for (const [id, layer] of Object.entries(lag)) {
+        forFokus[id] = map.hasLayer(layer);
+        const inp = lagKontroll.querySelector(`[data-lag="${id}"]`);
+        if (FOKUS_LAG.has(id)) { layer.addTo(map); if (inp) inp.checked = true; }
+        else { map.removeLayer(layer); if (inp) inp.checked = false; }
+      }
+    } else if (forFokus) {
+      for (const [id, layer] of Object.entries(lag)) {
+        const inp = lagKontroll.querySelector(`[data-lag="${id}"]`);
+        if (forFokus[id]) { layer.addTo(map); if (inp) inp.checked = true; } else { map.removeLayer(layer); if (inp) inp.checked = false; }
+      }
+      forFokus = null;
+    }
   }
 
   // 1) Sonegrenser
@@ -336,6 +357,23 @@
       }
     });
     leggTilLagValg("strekninger", L.layerGroup([kant, strek])); registrerFilter(kant); registrerFilter(strek);
+    // liste i panelet
+    const ul = document.getElementById("strekliste");
+    if (ul) {
+      const rader = [];
+      strek.eachLayer(l => rader.push(l));
+      rader.sort((x, y) => String(x.feature.properties.sone).localeCompare(String(y.feature.properties.sone)) || (y.feature.properties.lengde_m - x.feature.properties.lengde_m));
+      let sum = 0;
+      for (const l of rader) {
+        const p = l.feature.properties; sum += p.lengde_m || 0;
+        const li = document.createElement("li");
+        li.innerHTML = `<span class="sw" style="background:${soneFarge(String(p.sone).split("+")[0])}"></span><b>Sone ${esc(p.sone)}</b> ${esc(p.gate || "")} <span class="k">${p.lengde_m} m</span>`;
+        li.onclick = () => { map.fitBounds(l.getBounds().pad(1.5)); l.openPopup(); };
+        ul.appendChild(li);
+      }
+      const sumEl = document.getElementById("streksum");
+      if (sumEl) sumEl.textContent = `${rader.length} strekninger, ${sum} m totalt, ca. ${Math.round(sum / 6)} plasser (6 m/plass).`;
+    }
   }
 
   // 5) Manuelt verifisert beboerparkering – hvit kant + farget strek
@@ -418,6 +456,7 @@
     lastPunktlag("lading", F.lade, "Ladeplass"), lastPunktlag("hc", F.hc, "HC-plass"),
     lastForbud(), lastAutomater(), lastOsm(), lastNvdb(), lastStrekninger()])).then(() => {
     document.getElementById("kunSone123").onchange = bruk123Filter;
+    document.getElementById("fokus").onchange = e => fokus(e.target.checked);
     bruk123Filter();
   });
   tegnemodus();
