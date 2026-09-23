@@ -274,7 +274,7 @@
 
   // ---------- Fallback: avganger direkte fra stopp ----------
   async function nearestBusStops(lat, lon, maxDist) {
-    const d = await gql(`query($lat:Float!,$lon:Float!,$md:Int!){
+    const d = await gql(`query($lat:Float!,$lon:Float!,$md:Float!){
       nearest(latitude:$lat, longitude:$lon, maximumDistance:$md, maximumResults:20,
               filterByPlaceTypes:[stopPlace], filterByModes:[bus], multiModalMode:child){
         edges{ node{ distance place{ ... on StopPlace{ id name latitude longitude } } } } }}`, { lat, lon, md: maxDist });
