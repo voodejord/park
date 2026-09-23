@@ -107,15 +107,35 @@
   .msg.err { color: var(--miss); }
   footer { color: var(--mist); font-size: 16px; margin-top: 30px; }
 
+  .more { width: 100%; margin: 8px 0 4px; background: transparent; border-style: dashed; color: var(--mist); }
+
   @media (max-width: 720px) {
-    body { font-size: 18px; }
-    header { grid-template-columns: 1fr; }
-    .eta { text-align: left; }
-    .eta-num { font-size: 72px; }
-    .quay-name { font-size: 34px; }
-    .dep { grid-template-columns: 96px 1fr; }
-    .dep .m { grid-column: 1 / -1; text-align: left; }
-    .dep .t { font-size: 32px; }
+    body { font-size: 17px; }
+    main { padding: 12px 14px 28px; }
+    header { grid-template-columns: 1fr auto; gap: 12px; align-items: start; padding-bottom: 12px; }
+    .quay-name { font-size: 26px; }
+    .quay-sub { font-size: 15px; margin-top: 4px; }
+    .eta { text-align: right; }
+    .eta-num { font-size: 52px; }
+    .eta-lbl { font-size: 14px; max-width: 150px; margin-left: auto; }
+    .verdict { margin: 14px 0; padding: 12px 14px; border-left-width: 8px; border-radius: 12px; font-size: 18px; min-height: 0; }
+    .verdict b { font-size: 26px; }
+    .dep { grid-template-columns: 78px 1fr; gap: 2px 12px; padding: 10px 6px; }
+    .dep .t { font-size: 26px; }
+    .dep .to { font-size: 17px; }
+    .dep .to small { font-size: 13px; }
+    .dep .m { grid-column: 2; text-align: left; font-size: 15px; white-space: normal; }
+    .dep .rt { font-size: 12px; margin-left: 5px; }
+    .bar { gap: 8px; margin-top: 16px; }
+    .bar > * { flex: 1 1 auto; }
+    button { padding: 10px 12px; min-height: 48px; min-width: 48px; border-radius: 12px; font-size: 16px; }
+    .buf { justify-content: center; font-size: 14px; gap: 6px; }
+    .buf b { min-width: 56px; }
+    .quays { grid-template-columns: 1fr; gap: 8px; margin-top: 12px; }
+    .quays button { flex-direction: column; align-items: flex-start; gap: 2px; }
+    .quays span { font-size: 14px; }
+    footer { font-size: 13px; margin-top: 20px; }
+    .msg { font-size: 17px; padding: 20px 0; }
   }
   @media (prefers-reduced-motion: no-preference) {
     .verdict { transition: border-left-color .3s; }
@@ -280,6 +300,9 @@
     let calls = state.calls.filter(c => c.t.getTime() > now - 60000);
     if (state.carsOnly) calls = calls.filter(c => CAR_FERRY.has(c.submode));
 
+    const allCalls = calls;
+    const small = window.matchMedia("(max-width: 720px)").matches, LIMIT = 6;
+    if (small && !state.expanded && calls.length > LIMIT) calls = calls.slice(0, LIMIT);
     const list = $("deps");
     list.innerHTML = "";
     let first = null;
@@ -306,11 +329,17 @@
     }
     // Merk kun første rekkbare
     list.querySelectorAll(".first").forEach((el, i) => { if (i > 0) el.classList.remove("first"); });
+    if (small && allCalls.length > LIMIT) {
+      const b = document.createElement("button"); b.className = "more";
+      b.textContent = state.expanded ? "Vis færre" : `Vis flere avganger (${allCalls.length - LIMIT})`;
+      b.onclick = () => { state.expanded = !state.expanded; render(); };
+      list.appendChild(b);
+    }
 
     const v = $("verdict");
-    if (!calls.length) { v.className = "verdict"; v.textContent = "Ingen avganger neste 6 timer fra denne kaia – trykk «Bytt kai»."; }
+    if (!allCalls.length) { v.className = "verdict"; v.textContent = "Ingen avganger neste 6 timer fra denne kaia – trykk «Bytt kai»."; }
     else if (arrive == null) { v.className = "verdict"; v.textContent = "Har avganger, mangler kjøretid."; }
-    else if (!first) { v.className = "verdict miss"; v.innerHTML = `Rekker ingen av de neste ${calls.length} avgangene med ${state.bufferMin} min margin.`; }
+    else if (!first) { v.className = "verdict miss"; v.innerHTML = `Rekker ingen av de neste ${allCalls.length} avgangene med ${state.bufferMin} min margin.`; }
     else {
       const wait = mins(first.t - arrive);
       v.className = `verdict ${first.margin >= 5 ? "go" : "wait"}`;
@@ -401,6 +430,7 @@
     else render();
   };
 
+  let rz; window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(render, 150); });
   setBuf(state.bufferMin);
   $("btnCars").setAttribute("aria-pressed", String(state.carsOnly));
   start();
