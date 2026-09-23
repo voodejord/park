@@ -280,27 +280,62 @@
     leggTilLagValg("osm", layer); registrerFilter(layer);
   }
 
-  // 4c) NVDB skiltplater
+  // 4c) NVDB skiltplater – klassifiseres fra skilttekst
+  function nvdbTolk(p) {
+    const t = (p.tekst || "").toLowerCase(), nr = String(p.skiltnummer || "");
+    const soner = [...t.matchAll(/sone\s*(\d+)(?:\s*(?:og|,|\/)\s*(\d+))?/g)].flatMap(m => [m[1], m[2]].filter(Boolean));
+    let kat = "annet";
+    if (/beboer/.test(t) || (/p-?\s*kort/.test(t) && /^808/.test(nr))) kat = "beboer";            // reservert strekning for sonekort
+    else if (/^376\.[12]/.test(nr) || (/p-?\s*kort/.test(t) && /^806/.test(nr))) kat = "sonegrense"; // innkjøring til sone / sonevilkår
+    else if (/^37[26]/.test(nr)) kat = "forbud";
+    else if (/^552/.test(nr) || /maks\s*\d+\s*tim/.test(t)) kat = /maks\.?\s*1\s*tim/.test(t) ? "ekspress" : "parkering";
+    return { kat, soner, soneTekst: soner.length ? soner.join("+") : "" };
+  }
   async function lastNvdb() {
     const gj = await hentLag("nvdb");
-    const farge = k => ({ boligsone: F.boligsone, forbud: F.forbud }[k] || F.avgift);
+    const farge = k => ({ beboer: F.boligsone, sonegrense: F.sone2, forbud: F.forbud, ekspress: F.ekspress }[k] || F.avgift);
     const layer = L.geoJSON(gj || { type: "FeatureCollection", features: [] }, {
+      filter: f => { Object.assign(f.properties, nvdbTolk(f.properties)); return f.properties.kat !== "annet"; },
       pointToLayer: (f, ll) => {
-        const k = f.properties.kategori;
-        return L.marker(ll, { icon: L.divIcon({ className: "", iconSize: [16, 16], iconAnchor: [8, 8],
-          html: `<div title="${esc(f.properties.tekst || "")}" style="width:${k === "boligsone" ? 16 : 10}px;height:${k === "boligsone" ? 16 : 10}px;background:${farge(k)};border:2px solid #fff;border-radius:3px;box-shadow:0 0 0 1px ${farge(k)}"></div>` }) });
+        const p = f.properties, k = p.kat, c = farge(k);
+        if (k === "beboer") return L.marker(ll, { icon: L.divIcon({ className: "", iconSize: [22, 22], iconAnchor: [11, 11],
+          html: `<div style="width:22px;height:22px;background:${c};color:#fff;border:2px solid #fff;border-radius:4px;box-shadow:0 0 0 1.5px ${c};font:bold 11px/18px sans-serif;text-align:center">${esc(p.soneTekst || "P")}</div>` }) });
+        if (k === "sonegrense") return L.marker(ll, { icon: L.divIcon({ className: "", iconSize: [14, 14], iconAnchor: [7, 7],
+          html: `<div style="width:14px;height:14px;border:3px solid ${c};background:#fff;border-radius:2px;color:${c};font:bold 9px/8px sans-serif;text-align:center">${esc(p.soneTekst)}</div>` }) });
+        return L.circleMarker(ll, { radius: 4, color: "#fff", weight: 1, fillColor: c, fillOpacity: .85 });
       },
-      style: f => ({ color: farge(f.properties.kategori), weight: 3 }),
       onEachFeature: (f, l) => {
         const p = f.properties;
-        l.bindPopup(popupTabell(`Skilt ${p.skiltnummer || "?"}`, [
-          ["Tekst", p.tekst], ["Kategori", p.kategori], ["Ligger i", "sone " + soneFor(f.geometry)],
-          ["Vegreferanse", p.vegsystem], ["NVDB-id", p.nvdb_id],
-          ...Object.entries(p.egenskaper || {}).filter(([k]) => !/^(Tekst|Skiltnummer)$/.test(k)).slice(0, 8)
+        l.bindPopup(popupTabell(`${p.kat === "beboer" ? "Beboerparkering" : p.kat === "sonegrense" ? "Soneinnkjøring" : "Skilt"} ${p.soneTekst ? "sone " + p.soneTekst : ""}`, [
+          ["Skilttekst", p.tekst], ["Skilt", p.skiltnummer], ["Ligger i polygon", "sone " + soneFor(f.geometry)],
+          ["Retning", p.egenskaper && p.egenskaper["Ansiktsside, rettet mot"]], ["Vegreferanse", p.vegsystem],
+          ["Skiltpunkt (mor)", p.mor && p.mor[0]], ["NVDB-id", p.nvdb_id]
         ]));
       }
     });
     leggTilLagValg("nvdb", layer); registrerFilter(layer);
+    // Liten oppsummering i lag-merknaden
+    const n = { beboer: 0, sonegrense: 0 }; layer.eachLayer(l => { if (l.feature && n[l.feature.properties.kat] !== undefined) n[l.feature.properties.kat]++; });
+    const li = [...lagKontroll.children].find(x => x.textContent.includes(C.lag.nvdb.tittel));
+    if (li) li.querySelector(".merknad").textContent = `${n.beboer} beboerskilt (firkant m/ sonetall), ${n.sonegrense} soneinnkjøringsskilt (ramme). Skiltet står der reguleringen begynner.`;
+  }
+
+  // 4d) Utledede strekninger fra NVDB-skilt
+  async function lastStrekninger() {
+    const gj = await hentLag("strekninger") || { type: "FeatureCollection", features: [] };
+    const kant = L.geoJSON(gj, { style: () => ({ color: "#fff", weight: 10, opacity: 0.85 }), interactive: false });
+    const strek = L.geoJSON(gj, {
+      style: f => ({ color: soneFarge(String(f.properties.sone).split("+")[0]), weight: 6, opacity: 0.95, dashArray: "12 6" }),
+      onEachFeature: (f, l) => {
+        const p = f.properties;
+        l.bindPopup(popupTabell(`Beboerparkering sone ${p.sone} (utledet)`, [
+          ["Skilttekst", p.tekst], ["Vegreferanse", p.gate], ["Lengde", p.lengde_m + " m"], ["Slutt", p.stopp],
+          ["Side", p.side], ["Retning", p.retning], ["På stolpen", (p.plater_paa_stolpen || []).join(" · ")],
+          ["Ligger i polygon", "sone " + soneFor(f.geometry)], ["Skiltpunkt", p.skiltpunkt_id]
+        ], `<span class="status-chip indikert">utledet</span>`));
+      }
+    });
+    leggTilLagValg("strekninger", L.layerGroup([kant, strek])); registrerFilter(kant); registrerFilter(strek);
   }
 
   // 5) Manuelt verifisert beboerparkering – hvit kant + farget strek
@@ -368,9 +403,9 @@
   const legend = document.getElementById("legend");
   [
     ["fill", F.sone1, "Sone 1 – søknadsområde"], ["fill", F.sone2, "Sone 2 – søknadsområde"], ["fill", F.sone3, "Sone 3 – søknadsområde"],
-    ["", F.boligsone, "Beboerparkering, verifisert (heltrukket) / usikker (stiplet)"],
+    ["", F.boligsone, "Beboerparkering – manuell (heltrukket) / utledet fra skilt (stiplet)"],
     ["dot", F.ekspress, "Ekspress / korttid"], ["dot", F.avgift, "Vanlig avgiftsparkering"],
-    ["dot", F.hc, "HC"], ["dot", F.lade, "Lading"], ["dot", F.annet, "Annet"], ["fill", F.automat, "Beboeranlegg / P-hus"], ["dot", F.boligsone, "NVDB-skilt: sone/beboer (firkant)"],
+    ["dot", F.hc, "HC"], ["dot", F.lade, "Lading"], ["dot", F.annet, "Annet"], ["fill", F.automat, "Beboeranlegg / P-hus"], ["dot", F.boligsone, "Beboerskilt NVDB (lilla firkant m/ sonetall)"], ["dot", F.sone2, "Soneinnkjøringsskilt NVDB (ramme)"],
     ["hatch", "", "Parkeringsforbud"], ["dot", F.automat, "Boligsoneautomat"]
   ].forEach(([kl, farge, tekst]) => {
     const li = document.createElement("li");
@@ -381,7 +416,7 @@
   // ---------- Start ----------
   lastSonegrenser().then(() => Promise.all([lastManuell(), lastParkeringskart(),
     lastPunktlag("lading", F.lade, "Ladeplass"), lastPunktlag("hc", F.hc, "HC-plass"),
-    lastForbud(), lastAutomater(), lastOsm(), lastNvdb()])).then(() => {
+    lastForbud(), lastAutomater(), lastOsm(), lastNvdb(), lastStrekninger()])).then(() => {
     document.getElementById("kunSone123").onchange = bruk123Filter;
     bruk123Filter();
   });
