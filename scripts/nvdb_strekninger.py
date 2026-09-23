@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-#!/usr/bin/env python3
 """
 Utled boligsone-strekninger fra NVDB-skilt -> data/nvdb_strekninger.geojson
 
@@ -305,6 +304,10 @@ def folg(vid, pos, fram, side, start_id, typer_cache, maks_m=MAKS_M, hopp=2):
 
 # ---------- hoved ----------
 def main():
+    try:
+        GATENAVN = json.loads((DATA / "gatenavn.json").read_text(encoding="utf-8"))
+    except Exception:
+        GATENAVN = {}
     skilt = json.loads(INN.read_text(encoding="utf-8"))["features"]
     beboer = [f for f in skilt if f["properties"].get("kategori") == "boligsone"
               and str(f["properties"].get("skiltnummer", "")).startswith("808")
@@ -340,7 +343,7 @@ def main():
                 continue
             soner = re.findall(r"sone\s*(\d+)", (p.get("tekst") or "").lower())
             feats.append({"type": "Feature", "properties": {
-                "gate": p.get("vegsystem"), "sone": "+".join(dict.fromkeys(soner)) or "?", "tekst": p.get("tekst"),
+                "gate": GATENAVN.get(str(sp["vid"])) or p.get("vegsystem"), "vegref": p.get("vegsystem"), "sone": "+".join(dict.fromkeys(soner)) or "?", "tekst": p.get("tekst"),
                 "skilt_id": p.get("nvdb_id"), "skiltpunkt_id": sp["id"], "veglenkesekvens": sp["vid"],
                 "side": {"H": "høyre (metreringsretning)", "V": "venstre (metreringsretning)"}.get(side, side),
                 "retning": "med metrering" if fram else "mot metrering",
