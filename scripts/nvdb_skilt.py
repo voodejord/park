@@ -42,7 +42,7 @@ def i_bbox(geom):
 
 
 def hent(objekttype):
-    felles = {"kommune": 4601, "srid": 4326, "antall": 1000, "sortering": "false", "inkluderAntall": "false",
+    felles = {"kommune": 4601, "srid": 4326, "antall": 1000, "inkluderAntall": "false",
               "inkluder": "egenskaper,geometri,lokasjon,relasjoner"}
     # Forsøk 1: kartutsnitt (lon,lat-rekkefølge i 4326). Forsøk 2: hele kommunen, filtrer lokalt.
     forsok = [dict(felles, kartutsnitt=BBOX), dict(felles)]
@@ -51,7 +51,7 @@ def hent(objekttype):
         try:
             d = get(url)
         except RuntimeError as e:
-            print("  feilet:", str(e).splitlines()[0], file=sys.stderr); continue
+            print("  feilet:", e, file=sys.stderr); continue
         alle = d.get("objekter", [])
         nxt = d.get("metadata", {}).get("neste", {}).get("href")
         print(f"  type {objekttype}: {len(alle)} (kartutsnitt={'kartutsnitt' in params})", file=sys.stderr)
