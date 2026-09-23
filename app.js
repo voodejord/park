@@ -77,6 +77,26 @@
     return "annet";
   }
 
+  // Sonepolygoner lagres for oppslag: hvilken sone ligger et punkt i?
+  let sonePolys = [];
+  function iPolygon(pt, ring) { // pt [lon,lat], ring [[lon,lat],...]
+    let inne = false;
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const [xi, yi] = ring[i], [xj, yj] = ring[j];
+      if ((yi > pt[1]) !== (yj > pt[1]) && pt[0] < (xj - xi) * (pt[1] - yi) / (yj - yi) + xi) inne = !inne;
+    }
+    return inne;
+  }
+  function soneFor(geom) {
+    let pt;
+    if (geom.type === "Point") pt = geom.coordinates;
+    else if (geom.type === "LineString") pt = geom.coordinates[Math.floor(geom.coordinates.length / 2)];
+    else if (geom.type === "Polygon") pt = geom.coordinates[0][0];
+    else return null;
+    for (const s of sonePolys) if (iPolygon(pt, s.ring)) return s.sone;
+    return "utenfor 1–3";
+  }
+
   function soneFarge(sone) {
     const s = String(sone ?? "").trim();
     return F["sone" + s] || F.boligsone;
@@ -101,8 +121,12 @@
   async function lastSonegrenser() {
     const gj = await hentLag("sonegrenser");
     if (!gj) return;
+    sonePolys = gj.features.flatMap(f => {
+      const g = f.geometry, rings = g.type === "Polygon" ? [g.coordinates[0]] : g.coordinates.map(p => p[0]);
+      return rings.map(ring => ({ sone: f.properties.sone, ring }));
+    });
     const layer = L.geoJSON(gj, {
-      style: f => ({ color: soneFarge(f.properties.sone), weight: 1.5, fillOpacity: 0.07, dashArray: "6 4" }),
+      style: f => ({ color: soneFarge(f.properties.sone), weight: 2, fillOpacity: 0.04, dashArray: "6 4" }),
       onEachFeature: (f, l) => {
         const p = f.properties;
         l.bindPopup(popupTabell(`Sone ${p.sone ?? "?"} – ${p.sone_navn ?? "søknadsområde"}`, [
@@ -148,6 +172,7 @@
         const p = f.properties;
         l.bindPopup(popupTabell(p[felt.gate] || "Parkering", [
           ["Kategori", f._kat],
+          ["Ligger i", "sone " + soneFor(f.geometry)],
           ["Type", p[felt.type]],
           ["Betingelser", p[felt.betingelser]],
           ["Antall plasser", p[felt.antall]],
@@ -169,7 +194,7 @@
       onEachFeature: (f, l) => {
         const p = f.properties;
         l.bindPopup(popupTabell(p[felt.gate] || tittelFn, [
-          ["Betingelser", p[felt.betingelser]], ["Antall plasser", p[felt.antall]], ["Info", p[felt.info]],
+          ["Ligger i", "sone " + soneFor(f.geometry)], ["Betingelser", p[felt.betingelser]], ["Antall plasser", p[felt.antall]], ["Info", p[felt.info]],
           ["Bredde/lengde cm", p.bredde_cm ? `${p.bredde_cm} / ${p.lengde_cm}` : null], ["OBJECTID", p.OBJECTID]
         ]));
       }
@@ -200,45 +225,62 @@
     leggTilLagValg("automater", layer);
   }
 
-  // 4b) OSM gateparkering
+  // 4b) OSM gateparkering – klassifiseres her fra rå-tagger
+  function osmKategori(t) {
+    const s = Object.entries(t).map(([k, v]) => `${k}=${v}`).join(" ").toLowerCase();
+    if (/underground|multi-storey|p-hus|anlegg|beboerparkinger/.test(s)) return "anlegg";
+    if (/access=(permit|residents)|parking:[a-z:]*=(residents|permit)|soneparkering|sonekort|p-kort|beboere/.test(s)) return "beboer";
+    if (/access=private/.test(s)) return "privat";
+    if (/no_parking|no_stopping|no_standing/.test(s)) return "forbud";
+    if (/maxstay=(1 ?h|1 ?hour|60|30|15|0\.5|pt1h)/.test(s)) return "ekspress";
+    if (/fee=yes|fee=mo|ticket|paid/.test(s)) return "avgift";
+    return "annet";
+  }
   async function lastOsm() {
     const gj = await hentLag("osm");
-    const farge = k => ({ beboer: F.boligsone, ekspress: F.ekspress, avgift: F.avgift, forbud: F.forbud }[k] || F.annet);
+    const farge = k => ({ beboer: F.boligsone, ekspress: F.ekspress, avgift: F.avgift, forbud: F.forbud, privat: "#c9c3b4", anlegg: F.automat }[k] || F.annet);
     const layer = L.geoJSON(gj || { type: "FeatureCollection", features: [] }, {
-      style: f => ({ color: farge(f.properties.kategori), weight: 4, opacity: 0.7, fillOpacity: 0.25 }),
-      pointToLayer: (f, ll) => L.circleMarker(ll, { radius: 4, color: farge(f.properties.kategori), fillOpacity: .8 }),
+      filter: f => { f.properties.kategori = osmKategori(f.properties.alle_tags || {}); return true; },
+      style: f => {
+        const k = f.properties.kategori;
+        if (k === "anlegg") return { color: F.automat, weight: 1.5, opacity: 0.7, fillColor: F.automat, fillOpacity: 0.2 };
+        if (k === "privat") return { color: "#a39e91", weight: 1, opacity: 0.5, fillColor: "#c9c3b4", fillOpacity: 0.25 };
+        if (k === "beboer") return { color: farge(k), weight: 6, opacity: 0.95, fillOpacity: 0.55 };
+        return { color: farge(k), weight: 3, opacity: 0.7, fillOpacity: 0.3 };
+      },
+      pointToLayer: (f, ll) => L.circleMarker(ll, { radius: 4, color: "#fff", weight: 1, fillColor: farge(f.properties.kategori), fillOpacity: .9 }),
       onEachFeature: (f, l) => {
-        const p = f.properties;
-        const park = p.parking ? Object.entries(p.parking).map(([k, v]) => `${k}=${v}`).join(" · ") : null;
-        l.bindPopup(popupTabell(p.name || "OSM " + p.osm_type + " " + p.osm_id, [
-          ["Kategori", p.kategori], ["Parking-tags", park], ["Access", p.access], ["Fee", p.fee], ["Maxstay", p.maxstay],
-          ["Kapasitet", p.capacity], ["OSM", `${p.osm_type}/${p.osm_id}`]
+        const p = f.properties, t = p.alle_tags || {};
+        const park = Object.entries(t).filter(([k]) => k.startsWith("parking")).map(([k, v]) => `${k}=${v}`).join(" · ");
+        l.bindPopup(popupTabell(p.name || t.name || "OSM " + p.osm_type + " " + p.osm_id, [
+          ["Kategori", p.kategori], ["Ligger i", "sone " + soneFor(f.geometry)], ["Parking-tags", park || null],
+          ["Access", t.access], ["Fee", t.fee], ["Maxstay", t.maxstay], ["Kapasitet", t.capacity],
+          ["OSM", `${p.osm_type}/${p.osm_id}`]
         ]));
       }
     });
     leggTilLagValg("osm", layer);
   }
 
-  // 5) Manuelt verifisert beboerparkering
+  // 5) Manuelt verifisert beboerparkering – hvit kant + farget strek
   async function lastManuell() {
-    const gj = await hentLag("manuell");
-    const layer = L.geoJSON(gj || { type: "FeatureCollection", features: [] }, {
+    const gj = await hentLag("manuell") || { type: "FeatureCollection", features: [] };
+    const kant = L.geoJSON(gj, { style: () => ({ color: "#ffffff", weight: 11, opacity: 0.9 }), interactive: false });
+    const strek = L.geoJSON(gj, {
       style: f => {
         const p = f.properties;
-        return {
-          color: soneFarge(p.sone), weight: 7, opacity: p.status === "verifisert" ? 0.95 : 0.55,
-          dashArray: p.status === "verifisert" ? null : "8 6"
-        };
+        return { color: soneFarge(p.sone), weight: 7, opacity: 1, dashArray: p.status === "verifisert" ? null : "10 8" };
       },
       onEachFeature: (f, l) => {
         const p = f.properties;
         l.bindPopup(popupTabell(`${p.gate} – sone ${p.sone}`, [
-          ["Strekning", p.strekning], ["Side", p.side], ["Antall plasser", p.antall_plasser ?? "ikke registrert"],
+          ["Strekning", p.strekning], ["Side", p.side], ["Ligger i", "sone " + soneFor(f.geometry)],
+          ["Antall plasser", p.antall_plasser ?? "ikke registrert"],
           ["Vilkår", p.vilkar], ["Kilde", p.kilde], ["Geometri", p.geometri_noyaktighet], ["Sist sjekket", p.sist_sjekket]
         ], `<span class="status-chip ${esc(p.status)}">${esc(p.status)}</span>`));
       }
     });
-    leggTilLagValg("manuell", layer);
+    leggTilLagValg("manuell", L.layerGroup([kant, strek]));
   }
 
   // ---------- Tegnemodus: klikk punkter, få GeoJSON ----------
@@ -287,7 +329,7 @@
     ["fill", F.sone1, "Sone 1 – søknadsområde"], ["fill", F.sone2, "Sone 2 – søknadsområde"], ["fill", F.sone3, "Sone 3 – søknadsområde"],
     ["", F.boligsone, "Beboerparkering, verifisert (heltrukket) / usikker (stiplet)"],
     ["dot", F.ekspress, "Ekspress / korttid"], ["dot", F.avgift, "Vanlig avgiftsparkering"],
-    ["dot", F.hc, "HC"], ["dot", F.lade, "Lading"], ["dot", F.annet, "Annet"],
+    ["dot", F.hc, "HC"], ["dot", F.lade, "Lading"], ["dot", F.annet, "Annet"], ["fill", "#c9c3b4", "Privat (OSM) – ikke boligsone"], ["fill", F.automat, "Beboeranlegg / P-hus (OSM)"],
     ["hatch", "", "Parkeringsforbud"], ["dot", F.automat, "Boligsoneautomat"]
   ].forEach(([kl, farge, tekst]) => {
     const li = document.createElement("li");
@@ -296,8 +338,8 @@
   });
 
   // ---------- Start ----------
-  Promise.all([lastSonegrenser(), lastManuell(), lastParkeringskart(),
+  lastSonegrenser().then(() => Promise.all([lastManuell(), lastParkeringskart(),
     lastPunktlag("lading", F.lade, "Ladeplass"), lastPunktlag("hc", F.hc, "HC-plass"),
-    lastForbud(), lastAutomater(), lastOsm()]);
+    lastForbud(), lastAutomater(), lastOsm()]));
   tegnemodus();
 })();
