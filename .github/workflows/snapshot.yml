@@ -1,8 +1,8 @@
 name: Snapshot ArcGIS-data
 on:
-  workflow_dispatch:          # manuell knapp
+  workflow_dispatch:
   schedule:
-    - cron: "0 4 * * 1"       # mandager 04:00 UTC
+    - cron: "0 4 * * 1"
 permissions:
   contents: write
 jobs:
@@ -13,14 +13,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Inspiser tjenester (til loggen)
-        run: python3 scripts/snapshot.py --inspect || true
+      - name: Inspiser tjenester
+        run: python3 scripts/snapshot.py --inspect > data/inspect.txt 2>&1 || true
       - name: Last ned lag
-        run: python3 scripts/snapshot.py
+        run: python3 scripts/snapshot.py || true
       - name: Commit data
         run: |
           git config user.name "snapshot-bot"
           git config user.email "actions@github.com"
-          git add data/*.geojson
+          git add data/
           git diff --cached --quiet || git commit -m "Snapshot $(date -u +%F)"
           git push
