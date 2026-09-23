@@ -21,9 +21,9 @@ window.KART_CONFIG = {
       merknad: "Polygonene viser hvem som kan søke om sonekort – IKKE hvor det faktisk er skiltet parkering. Gjelder særlig sone 1."
     },
     parkeringskart: {
-      tittel: "Kommunens parkeringskart 2023",
-      // Lag-ID må verifiseres: åpne Parkeringskart_bergenskart2023/MapServer?f=json og sjekk "layers".
-      service: "Parkeringskart_bergenskart2023/MapServer/0",
+      tittel: "Avgiftsparkering – automater/parkometer",
+      // Verifisert 2026-09-23: lag 1 = Parkeringsautomater (Type '552 Automat' / '552 Parkometer'), lag 3 = Parkometer (delmengde)
+      service: "Parkeringskart_bergenskart2023/MapServer/1",
       where: "1=1",
       snapshot: "data/parkeringskart.geojson",
       paa: true,
@@ -34,7 +34,23 @@ window.KART_CONFIG = {
         info: "publikum_tilleggsinfo",
         type: "Type"
       },
-      merknad: "Avgiftsplasser, automater, ekspress mv. Type='376 Boligsone' er IKKE et komplett boligsonelag."
+      merknad: "Punkt per automat med registrert antall plasser. Ekspress/korttid utledes fra betingelsesteksten."
+    },
+    lading: {
+      tittel: "EL-ladeplasser",
+      service: "Parkeringskart_bergenskart2023/MapServer/4",
+      where: "1=1",
+      snapshot: "data/lading.geojson",
+      paa: false,
+      felt: { gate: "publikum_Gate", betingelser: "publikum_PBetingelser", antall: "pubklikum_AntallPlasser", info: "publikum_tilleggsinfo" }
+    },
+    hc: {
+      tittel: "HC-parkering",
+      service: "Parkeringskart_bergenskart2023/MapServer/2",
+      where: "1=1",
+      snapshot: "data/hc.geojson",
+      paa: false,
+      felt: { gate: "adressenavn", info: "informasjon" }
     },
     parkeringsforbud: {
       tittel: "Parkeringsforbud i boligsone",
@@ -61,11 +77,9 @@ window.KART_CONFIG = {
   // Klassifisering av kommunens Type-/betingelsesfelt til kartkategorier.
   // Nøkkel = kategori, verdi = regex som matches mot Type + PBetingelser (case-insensitive).
   klassifisering: [
-    { kat: "ekspress",  re: /ekspress|maks\s*1\s*t|1\s*time|korttid/i },
-    { kat: "boligsone", re: /boligsone|beboer|sonekort|sone\s*[123]\b/i },
-    { kat: "hc",        re: /\bhc\b|forflytningshem/i },
-    { kat: "lade",      re: /lad(e|ing)|el-?bil/i },
-    { kat: "avgift",    re: /avgift|automat|parkometer|betal/i },
+    { kat: "ekspress",  re: /ekspress|maks(imalt)?\s*[12]\s*t(ime)?|korttid/i },
+    { kat: "boligsone", re: /boligsone|beboer|sonekort/i },
+    { kat: "avgift",    re: /552|avgift|automat|parkometer|betal|kr/i },
   ],
 
   farger: {
