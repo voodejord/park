@@ -165,7 +165,8 @@
   const $ = id => document.getElementById(id);
   const state = {
     pos: null,            // {lat, lon}
-    quays: [],            // [{id, name, lat, lon, distance}]
+    allQuays: [],         // alle vannkaier fra Entur
+    quays: [],            // filtrert liste [{id, name, lat, lon, distance}]
     quay: null,
     driveSec: null,       // sekunder kjøretid
     driveSource: "",
@@ -193,7 +194,7 @@
 
   async function nearestQuays(lat, lon) {
     const d = await gql(`query($lat:Float!,$lon:Float!){
-      nearest(latitude:$lat, longitude:$lon, maximumDistance:150000, maximumResults:12,
+      nearest(latitude:$lat, longitude:$lon, maximumDistance:150000, maximumResults:25,
               filterByPlaceTypes:[stopPlace], filterByModes:[water], multiModalMode:child){
         edges{ node{ distance place{ ... on StopPlace{ id name latitude longitude } } } }
       }}`, { lat, lon });
@@ -220,6 +221,24 @@
       lineName: c.serviceJourney?.line?.name || "",
       submode: c.serviceJourney?.transportSubmode || "",
     }));
+  }
+
+  async function carFerryQuayIds(ids) {
+    const d = await gql(`query($ids:[String]!){
+      stopPlaces(ids:$ids){ id
+        estimatedCalls(numberOfDepartures:8, timeRange:86400){
+          serviceJourney{ transportSubmode } } } }`, { ids });
+    return new Set((d.stopPlaces || [])
+      .filter(s => s?.estimatedCalls?.some(c => CAR_FERRY.has(c.serviceJourney?.transportSubmode)))
+      .map(s => s.id));
+  }
+
+  async function applyQuayFilter() {
+    if (state.carsOnly) {
+      const ok = await carFerryQuayIds(state.allQuays.map(q => q.id));
+      state.quays = state.allQuays.filter(q => ok.has(q.id));
+    } else state.quays = state.allQuays;
+    renderQuays();
   }
 
   // ---------- Kjøretid ----------
@@ -254,10 +273,7 @@
     $("etaLbl").textContent = arrive ? `min kjøretid · på kai ${hhmm(new Date(arrive))}` : "min kjøretid";
 
     let calls = state.calls.filter(c => c.t.getTime() > now - 60000);
-    if (state.carsOnly) {
-      const cf = calls.filter(c => CAR_FERRY.has(c.submode));
-      if (cf.length) calls = cf;   // fall tilbake til alt hvis kaia ikke har bilferje-koding
-    }
+    if (state.carsOnly) calls = calls.filter(c => CAR_FERRY.has(c.submode));
 
     const list = $("deps");
     list.innerHTML = "";
@@ -337,15 +353,15 @@
     state.pos = { lat, lon };
     if (firstFix) {
       try {
-        state.quays = await nearestQuays(lat, lon);
-        if (!state.quays.length) { $("quayName").textContent = "Ingen ferjekai innen 80 km"; return; }
-        renderQuays();
+        state.allQuays = await nearestQuays(lat, lon);
+        await applyQuayFilter();
+        if (!state.quays.length) { $("quayName").textContent = state.carsOnly ? "Ingen bilferjekai innen 150 km" : "Ingen ferjekai innen 150 km"; return; }
         const saved = state.quays.find(q => q.id === localStorageGet("quay", ""));
         await selectQuay(saved || state.quays[0]);
       } catch (e) { showErr(e); }
     } else {
       // oppdater avstand til kaiene når bilen flytter seg
-      for (const q of state.quays) q.distance = haversineKm(state.pos, q) * 1000;
+      for (const q of state.allQuays) q.distance = haversineKm(state.pos, q) * 1000;
     }
   }
 
@@ -370,7 +386,15 @@
   $("bufMinus").onclick = () => setBuf(state.bufferMin - 2);
   $("bufPlus").onclick = () => setBuf(state.bufferMin + 2);
   function setBuf(v) { state.bufferMin = Math.max(0, Math.min(30, v)); $("bufVal").textContent = state.bufferMin + " min"; localStorageSet("buf", state.bufferMin); render(); }
-  $("btnCars").onclick = e => { state.carsOnly = !state.carsOnly; e.currentTarget.setAttribute("aria-pressed", String(state.carsOnly)); localStorageSet("cars", state.carsOnly ? "1" : "0"); render(); };
+  $("btnCars").onclick = async e => {
+    state.carsOnly = !state.carsOnly;
+    e.currentTarget.setAttribute("aria-pressed", String(state.carsOnly));
+    localStorageSet("cars", state.carsOnly ? "1" : "0");
+    if (!state.allQuays.length) return render();
+    await applyQuayFilter();
+    if (state.quays.length && !state.quays.find(q => q.id === state.quay?.id)) await selectQuay(state.quays[0]);
+    else render();
+  };
 
   setBuf(state.bufferMin);
   $("btnCars").setAttribute("aria-pressed", String(state.carsOnly));
