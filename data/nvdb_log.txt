@@ -1,30 +1,11 @@
+  feilet: HTTP 400 for https://nvdbapiles.atlas.vegvesen.no/vegobjekter/api/v4/vegobjekter/96?kommune=4601&srid=4326&antall=1000&sortering=false&inkluderAntall=false&inkluder=egenskaper%2Cgeometri%2Clokasjon%2Crelasjoner&kartutsnitt=5.295%2C60.378%2C5.350%2C60.408
+  feilet: HTTP 400 for https://nvdbapiles.atlas.vegvesen.no/vegobjekter/api/v4/vegobjekter/96?kommune=4601&srid=4326&antall=1000&sortering=false&inkluderAntall=false&inkluder=egenskaper%2Cgeometri%2Clokasjon%2Crelasjoner
 Traceback (most recent call last):
-  File "/home/runner/work/park/park/scripts/nvdb_skilt.py", line 102, in <module>
+  File "/home/runner/work/park/park/scripts/nvdb_skilt.py", line 136, in <module>
     main()
-  File "/home/runner/work/park/park/scripts/nvdb_skilt.py", line 73, in main
+  File "/home/runner/work/park/park/scripts/nvdb_skilt.py", line 107, in main
     plater = hent(96)
              ^^^^^^^^
-  File "/home/runner/work/park/park/scripts/nvdb_skilt.py", line 38, in hent
-    d = get(url)
-        ^^^^^^^^
-  File "/home/runner/work/park/park/scripts/nvdb_skilt.py", line 28, in get
-    with urllib.request.urlopen(req, timeout=120) as r:
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/urllib/request.py", line 215, in urlopen
-    return opener.open(url, data, timeout)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/urllib/request.py", line 521, in open
-    response = meth(req, response)
-               ^^^^^^^^^^^^^^^^^^^
-  File "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/urllib/request.py", line 630, in http_response
-    response = self.parent.error(
-               ^^^^^^^^^^^^^^^^^^
-  File "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/urllib/request.py", line 559, in error
-    return self._call_chain(*args)
-           ^^^^^^^^^^^^^^^^^^^^^^^
-  File "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/urllib/request.py", line 492, in _call_chain
-    result = func(*args)
-             ^^^^^^^^^^^
-  File "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/urllib/request.py", line 639, in http_error_default
-    raise HTTPError(req.full_url, code, msg, hdrs, fp)
-urllib.error.HTTPError: HTTP Error 400: Bad Request
+  File "/home/runner/work/park/park/scripts/nvdb_skilt.py", line 67, in hent
+    raise RuntimeError("Begge forsøk mot NVDB feilet")
+RuntimeError: Begge forsøk mot NVDB feilet
