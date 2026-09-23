@@ -9,4 +9,5 @@
   type 96: 7200
   type 96: 8000
   type 96: 8777
+56 stolper med 552 + tekstløst 808 – henter skiltpunkt-egenskaper
 8777 skiltplater hentet, 2153 relevante -> /home/runner/work/park/park/data/nvdb_skilt.geojson Counter({'forbud': 1033, 'parkering': 974, 'boligsone': 146})
