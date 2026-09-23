@@ -99,7 +99,9 @@
       style: f => ({ color: soneFarge(f.properties.sone), weight: 1.5, fillOpacity: 0.07, dashArray: "6 4" }),
       onEachFeature: (f, l) => {
         const p = f.properties;
-        l.bindPopup(popupTabell(`Sone ${p.sone ?? "?"} – søknadsområde`, Object.entries(p),
+        l.bindPopup(popupTabell(`Sone ${p.sone ?? "?"} – ${p.sone_navn ?? "søknadsområde"}`, [
+          ["Status", p.Status], ["Sonekort", p.Sonekort], ["Elbil", p.Elbil], ["Besøkende", p["Besøkende"]], ["Pris", p.Pris]
+        ],
           `<div class="fotnote">Polygonet viser hvor man kan søke sonekort, ikke hvor det er skiltet parkering.</div>`));
       }
     });
@@ -151,6 +153,23 @@
   }
   document.querySelectorAll(".katfilter").forEach(i => i.onchange = tegnParkering);
   document.getElementById("gatesok").oninput = tegnParkering;
+
+  // 2b) Enkle punktlag (lading, HC)
+  async function lastPunktlag(id, farge, tittelFn) {
+    const gj = await hentLag(id);
+    const felt = C.lag[id].felt || {};
+    const layer = L.geoJSON(gj || { type: "FeatureCollection", features: [] }, {
+      pointToLayer: (f, ll) => L.circleMarker(ll, { radius: 5, color: "#fff", weight: 1, fillColor: farge, fillOpacity: 0.95 }),
+      onEachFeature: (f, l) => {
+        const p = f.properties;
+        l.bindPopup(popupTabell(p[felt.gate] || tittelFn, [
+          ["Betingelser", p[felt.betingelser]], ["Antall plasser", p[felt.antall]], ["Info", p[felt.info]],
+          ["Bredde/lengde cm", p.bredde_cm ? `${p.bredde_cm} / ${p.lengde_cm}` : null], ["OBJECTID", p.OBJECTID]
+        ]));
+      }
+    });
+    leggTilLagValg(id, layer);
+  }
 
   // 3) Parkeringsforbud
   async function lastForbud() {
@@ -212,5 +231,7 @@
   });
 
   // ---------- Start ----------
-  Promise.all([lastSonegrenser(), lastManuell(), lastParkeringskart(), lastForbud(), lastAutomater()]);
+  Promise.all([lastSonegrenser(), lastManuell(), lastParkeringskart(),
+    lastPunktlag("lading", F.lade, "Ladeplass"), lastPunktlag("hc", F.hc, "HC-plass"),
+    lastForbud(), lastAutomater()]);
 })();
