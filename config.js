@@ -97,7 +97,7 @@ window.KART_CONFIG = {
     manuell: {
       tittel: "Beboerparkering – manuelt verifisert",
       snapshot: "data/beboerparkering_manuell.geojson",
-      paa: true,
+      paa: false,
       merknad: "Strekninger dokumentert via skiltplan, feltobservasjon eller vedtak. Se status-felt per objekt."
     }
   },
