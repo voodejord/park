@@ -124,6 +124,31 @@ def main():
             "mor": [r.get("vegobjekter", [None])[0] for r in o.get("relasjoner", {}).get("foreldre", [])][:1] or None
         }, "geometry": geom})
     UT.write_text(json.dumps({"type": "FeatureCollection", "features": feats}, ensure_ascii=False), encoding="utf-8")
+
+    # Alle plater gruppert per stolpe (mor) – ufiltrert, så ingen tekst går tapt
+    stolper = {}
+    for o in plater:
+        e = egenskaper(o)
+        mor = [r.get("vegobjekter", [None])[0] for r in o.get("relasjoner", {}).get("foreldre", [])]
+        mor = mor[0] if mor else None
+        if mor is None:
+            continue
+        stolper.setdefault(str(mor), {"plater": [], "skiltpunkt": None}).setdefault("plater", []).append(
+            {"id": o.get("id"), "nr": e.get("Skiltnummer"), "tekst": e.get("Tekst"),
+             "andre": {k: v for k, v in e.items() if k not in ("Skiltnummer", "Tekst", "Geometri, punkt") and v is not None}})
+    # skiltpunktets egne egenskaper for stolper med 552 + tekstløst 808
+    ukjent = [m for m, st in stolper.items()
+              if any(str(p["nr"] or "").startswith("552") for p in st["plater"])
+              and any(str(p["nr"] or "").startswith("808") and not (p["tekst"] or "").strip() for p in st["plater"])]
+    print(f"{len(ukjent)} stolper med 552 + tekstløst 808 – henter skiltpunkt-egenskaper", file=sys.stderr)
+    for m in ukjent:
+        try:
+            sp = get(f"{API}/vegobjekter/{'95'}/{m}?" + urllib.parse.urlencode({"srid": 4326, "inkluder": "egenskaper,relasjoner"}))
+            stolper[m]["skiltpunkt"] = {"egenskaper": egenskaper(sp),
+                                        "barn_typer": [ (r.get("type") or {}).get("navn") for r in (sp.get("relasjoner") or {}).get("barn", []) or [] ]}
+        except Exception as ex:
+            stolper[m]["skiltpunkt"] = {"feil": str(ex)[:120]}
+    (UT.parent / "nvdb_stolper.json").write_text(json.dumps(stolper, ensure_ascii=False), encoding="utf-8")
     from collections import Counter
     print(f"{len(plater)} skiltplater hentet, {len(feats)} relevante ->", UT,
           Counter(f["properties"]["kategori"] for f in feats), file=sys.stderr)
