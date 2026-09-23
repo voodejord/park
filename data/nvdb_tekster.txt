@@ -1,0 +1,122 @@
+372 - Parkering forbudt: Gjelder plass
+372 - Parkering forbudt: Nedre Blekeveien 2A-16
+376.1 - Parkeringssone: 08 - 23 (08 - 17 ) Med p-kort
+376.1 - Parkeringssone: 08 - 23 (08 - 17)
+376.1 - Parkeringssone: 08 - 23 (08 - 17) Med P-kort eller mot avgift
+376.1 - Parkeringssone: 08 - 23 (08 - 17) Med P-kort eller mot avgoft
+376.1 - Parkeringssone: 08 - 23 (08 - 17) Med P-kort eller ved parkometer
+376.1 - Parkeringssone: 08 - 23 (08 - 17) Med P-kort ellerr ved parkomter
+376.1 - Parkeringssone: 08 - 23 (08 - 17) Med p- kort eller mot avgift
+376.1 - Parkeringssone: 08 - 23 (08 - 17) Med p-kort
+376.1 - Parkeringssone: 08 - 23 (08 - 17) Med p-kort eller mot avgift
+376.1 - Parkeringssone: 08 - 23 (08 - 17) Med p-kort eller ved parkometer
+376.1 - Parkeringssone: 08 - 23 (08 - 17) Med p-kort eller ved parkomter
+376.1 - Parkeringssone: 08 - 23 (08 - 17) Med p-kort mot avgift
+376.1 - Parkeringssone: 08 - 23 (08 - 17) med P-kort eller mot avgift
+376.1 - Parkeringssone: 08 - 23 (08 - 17) med p-kort eller mot avgift
+376.1 - Parkeringssone: 08 - 23 (08 - 17) med p-kort eller ved parkometer
+376.1 - Parkeringssone: 08 - 23 (08 - 17)Med p-kort eller mot avgift
+376.1 - Parkeringssone: 08 - 23 (08 - 179 med p-kort
+376.1 - Parkeringssone: 08 - 23 (08 - 23) Med P-kort eller mot avgift
+376.1 - Parkeringssone: 08 -23 (08 - 17) Med p-kort eller mot avgift
+376.1 - Parkeringssone: 8 - 23 (8 - 17) Med p-kort eller ved parkometer
+376.1 - Parkeringssone: 8 - 23 (8 - 17) med p-kort eller ved parkometer
+376.1 - Parkeringssone: 8 - 23 (8 - 17)med p-kort eller ved parkometer
+376.1 - Parkeringssone: Sentrum 1,0
+376.1 - Parkeringssone: Sone 3@@8-23 (8-17)@@med p-kort@@eller ved@@parkometer
+376.2 - Parkeringssone: Sone 5
+552 - Parkering: @807.8@Over 2 timer
+552 - Parkering: @P-hus@
+806 - Tid: 07 - 09 15 - 17
+806 - Tid: 07 - 10  14 - 17@372
+806 - Tid: 07-10 14-17 parkering forbudt øvrig tid
+806 - Tid: 07-10@@14-17
+806 - Tid: 08 - 16 (08 - 10)
+806 - Tid: 08 - 23 (08 - 15 ) maks 2 timer mot avgift
+806 - Tid: 08 - 23 (08 - 15) Maks 2 timer mot avgift
+806 - Tid: 08 - 23 (08 - 17) Maks 2 timer mot avgift
+806 - Tid: 08 - 23 (08 - 17) Med P-kort sone 7 og 8 eller mot avgift
+806 - Tid: 08 - 23 (08 - 17) Med P-kort sone 8 og eller mot avgift
+806 - Tid: 08 - 23 (08 - 17) Med P-kort sone eller mot avgift
+806 - Tid: 08 - 23 (08 - 17) Med p-kort sone 13 eller mot avgift
+806 - Tid: 08 - 23 (08 - 17) Med p-kort sone 7 og 8 eller mot avgift
+806 - Tid: 08 - 23 (08 - 17) Meks 2 timer mot avgift
+806 - Tid: 08 - 23 (08 - 17) maks 24 timer mot avgift
+806 - Tid: 08 - 23 (08 - 17)Med p-kort sone 13 eller mot avgift
+806 - Tid: 08 - 23 (08 - 23) Maks 1 timer mot avgift
+806 - Tid: 08 - 23 (08 - 23) Maks 2 timer mot avgift
+806 - Tid: 08 - 230(08 - 23) Maks 1 timer mot avgift
+806 - Tid: 15 - 23 (15 - 23) Maks 1 timer mot avgift
+806 - Tid: 22 - 05 Alle dager
+806 - Tid: 25 - 200 m
+806 - Tid: 8 - 23 (8 - 23) maks 2 timer mot avgift
+806 - Tid: @ 831
+806 - Tid: @07-10@@14-17@
+806 - Tid: Alle dager
+806 - Tid: Ladbar motorvogn under lading 08 - 23 Alle dager @831 @Maks 3 timer
+806 - Tid: Maks 2 timer mot avgift
+806 - Tid: Varetransport tillatt 06 - 11 (06 - 10)
+807.6 - Symbol, sykkel og liten elektrisk motorvogn: Unntatt
+807.6 - Symbol, sykkel og liten elektrisk motorvogn: unntatt
+807.8 - Symbol, forflytningshemmede med parkeringstillatelse: 08 - 17
+807.8 - Symbol, forflytningshemmede med parkeringstillatelse: Over 2 timer
+808 - Underskilt med annen tekst: 08 - 23 Alle dager @ 831 @Maks 3 timer
+808 - Underskilt med annen tekst: 08 - 23 Alle dager @831 Maks 4 timer
+808 - Underskilt med annen tekst: 08-17
+808 - Underskilt med annen tekst: @370@@Øvrig tid
+808 - Underskilt med annen tekst: @372 @ Parkering forbudt
+808 - Underskilt med annen tekst: @807.2@
+808 - Underskilt med annen tekst: @831
+808 - Underskilt med annen tekst: For Beboere med P-kort sone 1
+808 - Underskilt med annen tekst: For beboere med p-kort sone 1
+808 - Underskilt med annen tekst: For beboere med p-kort sone 6
+808 - Underskilt med annen tekst: For bildeling med gyldig tillatelse
+808 - Underskilt med annen tekst: GJELDER PLASSEN
+808 - Underskilt med annen tekst: Gangfelt
+808 - Underskilt med annen tekst: Gjelder beboere med P-kort i sone 7
+808 - Underskilt med annen tekst: Gjelder beboere med P-kort til sone 7
+808 - Underskilt med annen tekst: Gjelder beboere med P-kort til sone 8
+808 - Underskilt med annen tekst: Gjelder beboere med p korttid sone 1 og 5
+808 - Underskilt med annen tekst: Gjelder beboere med p-kort sone 1
+808 - Underskilt med annen tekst: Gjelder beboere med p-kort sone 1 og 5
+808 - Underskilt med annen tekst: Gjelder beboere med p-kort til sone 1
+808 - Underskilt med annen tekst: Gjelder beboere med p-kort til sone 7
+808 - Underskilt med annen tekst: Gjelder hele plassen
+808 - Underskilt med annen tekst: Gjelder ikke anleggstrafikk
+808 - Underskilt med annen tekst: Gjelder ikke buss i rute
+808 - Underskilt med annen tekst: Gjelder ikke kjøring til Kalvedalsveien 6a
+808 - Underskilt med annen tekst: Gjelder ikke kjøring til Nedre Korskirkeallm 14
+808 - Underskilt med annen tekst: Gjelder ikke vare transport 06 - 11 (06 - 10)
+808 - Underskilt med annen tekst: Gjelder ikke varetransport 06 - 11 (06 - 10)
+808 - Underskilt med annen tekst: Gjelder ikke varetransport 06 - 11(06 -10)
+808 - Underskilt med annen tekst: Gjelder plassen
+808 - Underskilt med annen tekst: Kjøring til Fyllingsveien 26 tillatt
+808 - Underskilt med annen tekst: Kong Christian Frederiks plass
+808 - Underskilt med annen tekst: Ladbar motorvogn under lading @ 08 - 23 Alle dager @ 831 Maks 3 timer
+808 - Underskilt med annen tekst: Lasteplass Av og palessing tillatt for @ 372@ øvring tid
+808 - Underskilt med annen tekst: Lave balkonger høyre side
+808 - Underskilt med annen tekst: Lave balkonger venstre side
+808 - Underskilt med annen tekst: Lørdag (15 - 20)
+808 - Underskilt med annen tekst: Opphøyd@@kryss
+808 - Underskilt med annen tekst: P-automat
+808 - Underskilt med annen tekst: Reserveert bildeling med gyldig tillatelse
+808 - Underskilt med annen tekst: Reservert bildeling med gyldig tillatelse
+808 - Underskilt med annen tekst: Skole
+808 - Underskilt med annen tekst: Sporvogn
+808 - Underskilt med annen tekst: Vennligst ikke legg press på portene kan føre til driftssans
+808 - Underskilt med annen tekst: vennligst ikke legg press på portene kan føre til driftsstans
+808 - Underskilt med annen tekst: Øvring tid
+808.301 - Gjelder gjennomkjøring/Gjeld gjennomkøyring: Gjelder@@gjennomkjøring
+808.313 - Gjelder ikke buss/Gjeld ikkje buss: Gjelder ikke buss i rute
+808.313 - Gjelder ikke buss/Gjeld ikkje buss: Gjelder ikke@@buss i rute
+808.317 - Gjelder ikke buss og taxi/Gjeld ikkje buss og taxi: Gjelder ikke buss@@taxi og utryknings-@@kjøretøy
+808.319 - Gjelder ikke (motorvogntype)/ Gjeld ikkje (motorvogntype): Gjelder ikke utrykningskjøretøy
+808.319 - Gjelder ikke (motorvogntype)/ Gjeld ikkje (motorvogntype): Gjelder ikke@@motorsykkel
+808.319 - Gjelder ikke (motorvogntype)/ Gjeld ikkje (motorvogntype): Gjelder ikkje motorsykkel
+808.321 - Gjelder/Gjeld (motorvogntype): @Gjelder ikke motorsykkel@
+808.351 - Gjelder/Gjeld (snuplassen, torget o.l.): Gjelder lomme
+808.515 - Gjelder ........ felt/Gjeld ........ Felt: Gjelder@@høyre felt
+808.515 - Gjelder ........ felt/Gjeld ........ Felt: Gjelder@@midtfelt og@@høyre felt
+808.553 - Med særskilt tillatelse/Med særskilt løyve: Gjelder ikke sykkel
+808.556 - Maks (tidsangivelse): Gjelder beboere med p-kort til sone 1
+834 - Kombinert regulering: Gjelder beboere med P-kort sone 1 og 5

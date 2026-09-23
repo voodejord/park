@@ -1,11 +1,12 @@
-  feilet: HTTP 400 for https://nvdbapiles.atlas.vegvesen.no/vegobjekter/api/v4/vegobjekter/96?kommune=4601&srid=4326&antall=1000&sortering=false&inkluderAntall=false&inkluder=egenskaper%2Cgeometri%2Clokasjon%2Crelasjoner&kartutsnitt=5.295%2C60.378%2C5.350%2C60.408
-  feilet: HTTP 400 for https://nvdbapiles.atlas.vegvesen.no/vegobjekter/api/v4/vegobjekter/96?kommune=4601&srid=4326&antall=1000&sortering=false&inkluderAntall=false&inkluder=egenskaper%2Cgeometri%2Clokasjon%2Crelasjoner
-Traceback (most recent call last):
-  File "/home/runner/work/park/park/scripts/nvdb_skilt.py", line 136, in <module>
-    main()
-  File "/home/runner/work/park/park/scripts/nvdb_skilt.py", line 107, in main
-    plater = hent(96)
-             ^^^^^^^^
-  File "/home/runner/work/park/park/scripts/nvdb_skilt.py", line 67, in hent
-    raise RuntimeError("Begge forsøk mot NVDB feilet")
-RuntimeError: Begge forsøk mot NVDB feilet
+  type 96: 800 (kartutsnitt=True)
+  type 96: 1600
+  type 96: 2400
+  type 96: 3200
+  type 96: 4000
+  type 96: 4800
+  type 96: 5600
+  type 96: 6400
+  type 96: 7200
+  type 96: 8000
+  type 96: 8777
+8777 skiltplater hentet, 2153 relevante -> /home/runner/work/park/park/data/nvdb_skilt.geojson Counter({'forbud': 1033, 'parkering': 974, 'boligsone': 146})
