@@ -5,4 +5,4 @@ type 47 trafikklommer: 115 obj
 type 538 adresser: 1476 obj
   felt: ['Adressekode', 'Adressenavn', 'Kommune', 'Sideveg', 'nvdb_id', 'type', 'veglenkesekvenser', 'vegsystem']
 gatenavn.json: 1373 veglenkesekvenser
-datakatalog: 31 typer nevner parkering
+datakatalog: 32 typer nevner parkering

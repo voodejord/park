@@ -12,7 +12,8 @@
 91: Signalhode – Innfatning med ett eller flere lys/lamper som til sammen danner et trafikklyssignal.
 96: Skiltplate – Plate med skiltmotiv.
 99: Vegoppmerking, langsgående – Vegoppmerking nyttes for å lede, varsle eller regulere trafikken, og for å klargjøre andre bestemmelser gitt ved trafikk
-110: Service – Vegobjekt som gir informasjon om service som er aktuell for trafikantene.
+110: Utgår_Service – Vegobjekt som gir informasjon om service som er aktuell for trafikantene. Merknad: Vegobjekttype vil utgå fra NVDB. Info
+163: Kamera – Fastmontert video- eller fotokamera for trafikkovervåkning.
 297: Kommentar – Vegobjekt beskriver spesielle forhold for det objektet det er knyttet til.
 446: Dokumentasjon – Arkivert informasjon, kan f.eks. være bilder, tegninger, tekniske beskrivelser eller bare lenker til lokale filer,  webs
 451: Sykkelparkering – Angir område tilrettelagt for sykkelparkering.

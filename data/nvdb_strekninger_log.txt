@@ -45,7 +45,7 @@
   ok None @ KV5744 S1D1 m78: 20 m (neste reguleringsskilt (snudd retning))
   ok None @ KV4532 S1D1 m53: 24 m (neste reguleringsskilt)
   ok None @ KV4532 S1D1 m77: 21 m (enden av veglenka)
-  ok None @ KV13310 S1D1 m81: 31 m (neste reguleringsskilt)
+  ok None @ KV13310 S1D1 m81: 139 m (enden av veglenka)
   ok None @ KV4305 S1D1 m64: 24 m (neste reguleringsskilt)
   ok None @ KV4500 S1D1 m18: 41 m (enden av veglenka)
   ok None @ KV4391 S2D1 m10: 20 m (neste reguleringsskilt)
