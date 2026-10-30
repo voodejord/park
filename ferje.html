@@ -180,6 +180,7 @@
   const ENTUR = "https://api.entur.io/journey-planner/v3/graphql";
   const CLIENT = "voodejord-ferjeapp";
   const OSRM = "https://router.project-osrm.org/route/v1/driving/";
+  const AT_QUAY_METERS = 150;  // GPS kan ligge litt unna selve ferjelemmen
   const CAR_FERRY = new Set(["localCarFerry", "nationalCarFerry", "regionalCarFerry", "internationalCarFerry", "roadFerryLink"]);
 
   const $ = id => document.getElementById(id);
@@ -194,6 +195,8 @@
     carsOnly: localStorageGet("cars", "1") === "1",
     calls: [],
     timer: null,
+    updatedAt: null,
+    requestId: 0,
   };
 
   function localStorageGet(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch { return d; } }
@@ -271,7 +274,11 @@
     const h = Math.sin(dLat / 2) ** 2 + Math.cos(toR(a.lat)) * Math.cos(toR(b.lat)) * Math.sin(dLon / 2) ** 2;
     return 2 * R * Math.asin(Math.sqrt(h));
   }
+  function atQuay() {
+    return !!(state.pos && state.quay && haversineKm(state.pos, state.quay) * 1000 <= AT_QUAY_METERS);
+  }
   async function driveTime(from, to) {
+    if (haversineKm(from, to) * 1000 <= AT_QUAY_METERS) return { sec: 0, src: "på kaia" };
     try {
       const r = await fetch(`${OSRM}${from.lon},${from.lat};${to.lon},${to.lat}?overview=false`);
       const j = await r.json();
@@ -289,36 +296,44 @@
   function render() {
     if (!state.quay) return;
     $("quayName").textContent = state.quay.name;
-    $("quaySub").textContent = `${(state.quay.distance / 1000).toFixed(1)} km unna` + (state.driveSource ? ` · kjøretid fra ${state.driveSource}` : "");
+    const onQuay = atQuay();
+    const distance = state.pos ? haversineKm(state.pos, state.quay) * 1000 : state.quay.distance;
+    $("quaySub").textContent = `${(distance / 1000).toFixed(1)} km unna` + (onQuay ? " · du er ved kaia" : state.driveSource ? ` · kjøretid fra ${state.driveSource}` : "");
 
     const now = Date.now();
-    const arrive = state.driveSec == null ? null : now + state.driveSec * 1000;
-    const dm = state.driveSec == null ? null : Math.round(state.driveSec / 60);
+    const driveSec = onQuay ? 0 : state.driveSec;
+    const bufferMin = onQuay ? 0 : state.bufferMin;
+    const arrive = driveSec == null ? null : now + driveSec * 1000;
+    const dm = driveSec == null ? null : Math.round(driveSec / 60);
     $("etaNum").textContent = dm == null ? "–" : dm < 60 ? dm : `${Math.floor(dm / 60)}:${String(dm % 60).padStart(2, "0")}`;
     $("etaLbl").textContent = dm == null ? "min kjøretid" : (dm < 60 ? "min kjøretid" : "t kjøretid") + (arrive ? ` · på kai ${hhmm(new Date(arrive))}` : "");
 
-    let calls = state.calls.filter(c => c.t.getTime() > now - 60000);
+    if (onQuay) $("etaLbl").textContent = "på kaia";
+
+    let calls = state.calls.filter(c => c.t.getTime() >= now).sort((a, b) => a.t - b.t);
     if (state.carsOnly) calls = calls.filter(c => CAR_FERRY.has(c.submode));
 
     const allCalls = calls;
+    // Finn neste avgang før mobilvisningen avkortes. Margin gjelder bare på vei til kaia.
+    const first = arrive == null ? null : allCalls.find(c => !c.cancelled && c.t.getTime() >= arrive + bufferMin * 60000);
+    const firstMargin = first ? mins(first.t - (arrive + bufferMin * 60000)) : null;
     const small = window.matchMedia("(max-width: 720px)").matches, LIMIT = 6;
     if (small && !state.expanded && calls.length > LIMIT) calls = calls.slice(0, LIMIT);
     const list = $("deps");
     list.innerHTML = "";
-    let first = null;
     for (const c of calls) {
       const li = document.createElement("li");
       let status = "", mtext = "";
       if (c.cancelled) { status = "miss"; mtext = "innstilt"; }
       else if (arrive == null) { mtext = `om ${dur(mins(c.t - now))}`; }
       else {
-        const margin = mins(c.t - (arrive + state.bufferMin * 60000));
-        if (margin >= 5) { status = "go"; mtext = `rekker · ${dur(margin)} til gode`; }
-        else if (margin >= 0) { status = "wait"; mtext = `knapt · ${margin} min`; }
+        const remaining = c.t - (arrive + bufferMin * 60000);
+        const margin = mins(remaining);
+        if (remaining >= 5 * 60000) { status = "go"; mtext = `rekker · ${dur(margin)} til gode`; }
+        else if (remaining >= 0) { status = "wait"; mtext = `knapt · ${margin} min`; }
         else { status = "miss"; mtext = `rekker ikke · ${dur(margin)} for sein`; }
-        if (!first && status !== "miss") first = { ...c, margin };
       }
-      li.className = `dep ${status}` + (first && first.t === c.t && !li.dataset.marked ? " first" : "");
+      li.className = `dep ${status}` + (first === c ? " first" : "");
       const rt = c.realtime ? "" : `<span class="rt">rutetid</span>`;
       const late = c.realtime && Math.abs(c.t - c.aimed) >= 60000 ? `<span class="rt">(${hhmm(c.aimed)})</span>` : "";
       li.innerHTML = `
@@ -327,8 +342,6 @@
         <div class="m">${mtext}</div>`;
       list.appendChild(li);
     }
-    // Merk kun første rekkbare
-    list.querySelectorAll(".first").forEach((el, i) => { if (i > 0) el.classList.remove("first"); });
     if (small && allCalls.length > LIMIT) {
       const b = document.createElement("button"); b.className = "more";
       b.textContent = state.expanded ? "Vis færre" : `Vis flere avganger (${allCalls.length - LIMIT})`;
@@ -339,14 +352,13 @@
     const v = $("verdict");
     if (!allCalls.length) { v.className = "verdict"; v.textContent = "Ingen avganger neste 6 timer fra denne kaia – trykk «Bytt kai»."; }
     else if (arrive == null) { v.className = "verdict"; v.textContent = "Har avganger, mangler kjøretid."; }
-    else if (!first) { v.className = "verdict miss"; v.innerHTML = `Rekker ingen av de neste ${allCalls.length} avgangene med ${state.bufferMin} min margin.`; }
+    else if (!first) { v.className = "verdict miss"; v.innerHTML = `Rekker ingen av de neste ${allCalls.length} avgangene med ${bufferMin} min margin.`; }
     else {
       const wait = mins(first.t - arrive);
-      v.className = `verdict ${first.margin >= 5 ? "go" : "wait"}`;
-      v.innerHTML = `Neste du rekker: <b>${hhmm(first.t)}</b> mot ${first.to} · venter ${dur(wait)} på kai`;
+      v.className = `verdict ${firstMargin >= 5 ? "go" : "wait"}`;
+      v.innerHTML = `${onQuay ? "Neste avgang" : "Neste du rekker"}: <b>${hhmm(first.t)}</b> mot ${first.to} · ${wait <= 0 ? "går nå" : `venter ${dur(wait)} på kai`}`;
     }
-    $("msg").textContent = "";
-    $("foot").textContent = `Oppdatert ${hhmm(new Date())}. Avganger: Entur. Kjøretid: ${state.driveSource || "–"}. Margin = tid du vil ha på kai før avgang.`;
+    $("foot").textContent = `${state.updatedAt ? "Oppdatert " + hhmm(state.updatedAt) + ". " : ""}Avganger: Entur. Kjøretid: ${onQuay ? "på kaia" : state.driveSource || "–"}. ${onQuay ? "Du er ved kaia – kjøretid og margin legges ikke til." : "Margin = tid du vil ha på kai før avgang."}`;
   }
 
   function renderQuays() {
@@ -363,27 +375,30 @@
 
   // ---------- Flyt ----------
   async function selectQuay(q) {
-    state.quay = q; state.calls = []; state.driveSec = null; state.driveSource = "";
+    state.quay = q; state.calls = []; state.driveSec = null; state.driveSource = ""; state.updatedAt = null;
     localStorageSet("quay", q.id);
     render();
-    const [dt, calls] = await Promise.all([driveTime(state.pos, q), departures(q.id).catch(e => { showErr(e); return []; })]);
-    state.driveSec = dt.sec; state.driveSource = dt.src; state.calls = calls;
-    render();
+    await refresh();
   }
 
   async function refresh() {
     if (!state.quay) return;
+    const requestId = ++state.requestId, quay = state.quay, pos = state.pos;
     try {
-      const [dt, calls] = await Promise.all([driveTime(state.pos, state.quay), departures(state.quay.id)]);
+      const [dt, calls] = await Promise.all([driveTime(pos, quay), departures(quay.id)]);
+      if (requestId !== state.requestId || quay !== state.quay) return;
       state.driveSec = dt.sec; state.driveSource = dt.src; state.calls = calls;
+      state.updatedAt = new Date();
+      $("msg").className = "msg"; $("msg").textContent = "";
       render();
-    } catch (e) { showErr(e); }
+    } catch (e) { if (requestId === state.requestId) showErr(e); }
   }
 
   function showErr(e) { const m = $("msg"); m.className = "msg err"; m.textContent = "Klarte ikke hente data: " + (e.message || e); }
 
   async function onPosition(lat, lon) {
     const firstFix = !state.pos;
+    const wasOnQuay = atQuay();
     state.pos = { lat, lon };
     if (firstFix) {
       try {
@@ -391,11 +406,18 @@
         await applyQuayFilter();
         if (!state.quays.length) { $("quayName").textContent = state.carsOnly ? "Ingen bilferje-avganger innen 150 km neste 6 t" : "Ingen ferjeavganger innen 150 km neste 6 t"; $("quaySub").textContent = ""; return; }
         const saved = state.quays.find(q => q.id === localStorageGet("quay", ""));
-        await selectQuay(saved || state.quays[0]);
+        const nearby = state.quays.find(q => haversineKm(state.pos, q) * 1000 <= AT_QUAY_METERS);
+        await selectQuay(nearby || saved || state.quays[0]);
       } catch (e) { showErr(e); }
     } else {
       // oppdater avstand til kaiene når bilen flytter seg
-      for (const q of state.allQuays) q.distance = haversineKm(state.pos, q) * 1000;
+      for (const q of [...state.allQuays, ...state.quays]) q.distance = haversineKm(state.pos, q) * 1000;
+      if (state.quay && wasOnQuay !== atQuay()) {
+        state.driveSec = null;
+        await refresh();
+      }
+      renderQuays();
+      render();
     }
   }
 
@@ -407,6 +429,7 @@
       { enableHighAccuracy: true, maximumAge: 15000, timeout: 20000 }
     );
     state.timer = setInterval(refresh, 60000);
+    setInterval(render, 10000);  // nedtelling også mellom hentingene fra Entur
   }
   function fallback() { onPosition(60.3913, 5.3221); }   // Bergen sentrum
 
